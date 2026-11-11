@@ -1,0 +1,143 @@
+"use client";
+
+import { create } from "zustand";
+import type { TrackDTO } from "@/lib/types";
+
+type PlayerState = {
+  queue: TrackDTO[];
+  index: number;
+  playing: boolean;
+  position: number;
+  duration: number;
+  playQueue: (tracks: TrackDTO[], startIndex?: number) => void;
+  toggle: () => void;
+  next: () => void;
+  prev: () => void;
+  seek: (sec: number) => void;
+};
+
+/**
+ * Exactly one <audio> element for the whole app. It lives at module level so it
+ * is never remounted by React — required for Media Session background playback.
+ * crossOrigin="anonymous" lets the service worker read/slice audio responses
+ * (needs CORS enabled on the storage origin in r2 mode; same-origin in local).
+ */
+export const audio: HTMLAudioElement | null =
+  typeof window === "undefined"
+    ? null
+    : (() => {
+        const a = new Audio();
+        a.preload = "auto";
+        a.crossOrigin = "anonymous";
+        return a;
+      })();
+
+export const usePlayer = create<PlayerState>((set, get) => ({
+  queue: [],
+  index: 0,
+  playing: false,
+  position: 0,
+  duration: 0,
+
+  playQueue: (tracks, startIndex = 0) => {
+    if (tracks.length === 0) return;
+    const index = Math.min(Math.max(startIndex, 0), tracks.length - 1);
+    set({ queue: tracks, index, position: 0 });
+    const t = tracks[index];
+    if (audio) {
+      if (!audio.src || new URL(audio.src).href !== new URL(t.audioUrl, location.href).href) {
+        audio.src = t.audioUrl;
+      }
+      audio.play().catch(() => {});
+    }
+    set({ playing: true });
+  },
+
+  toggle: () => {
+    if (!audio) return;
+    const t = get().queue[get().index];
+    if (!t) return;
+    if (audio.paused) audio.play().catch(() => {});
+    else audio.pause();
+    // playing state is synced by the play/pause events in bindAudio()
+  },
+
+  next: () => {
+    const { index, queue } = get();
+    if (index + 1 < queue.length) {
+      get().playQueue(queue, index + 1);
+    } else {
+      set({ playing: false });
+      audio?.pause();
+    }
+  },
+
+  prev: () => {
+    const { index, position, queue } = get();
+    if (position > 3 || index === 0) {
+      get().seek(0);
+    } else {
+      get().playQueue(queue, index - 1);
+    }
+  },
+
+  seek: (sec) => {
+    if (audio && Number.isFinite(sec)) {
+      audio.currentTime = sec;
+      set({ position: sec });
+    }
+  },
+}));
+
+let bound = false;
+/** Wire audio element events to the store. Call once from a client effect. */
+export function bindAudio() {
+  if (!audio || bound) return;
+  bound = true;
+  audio.addEventListener("play", () => usePlayer.setState({ playing: true }));
+  audio.addEventListener("pause", () => usePlayer.setState({ playing: false }));
+  audio.addEventListener("ended", () => usePlayer.getState().next());
+  audio.addEventListener("timeupdate", () =>
+    usePlayer.setState({ position: audio.currentTime }),
+  );
+  audio.addEventListener("loadedmetadata", () =>
+    usePlayer.setState({ duration: audio.duration || 0 }),
+  );
+}
+
+// ---------- play-count beacon accounting ----------
+
+export function getClientUuid(): string {
+  if (typeof window === "undefined") return "server";
+  let id = localStorage.getItem("ls-client-uuid");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("ls-client-uuid", id);
+  }
+  return id;
+}
+
+/** Approximate listened-seconds accumulator for the current track. */
+const acc = { last: -1, seconds: 0, trackId: null as string | null };
+
+export function observeTime(currentTime: number) {
+  const { last } = acc;
+  if (last >= 0 && Math.abs(currentTime - last) < 1.5) {
+    acc.seconds += currentTime - last;
+  }
+  acc.last = currentTime;
+}
+
+export function startAccumulating(trackId: string | null) {
+  acc.last = -1;
+  acc.seconds = 0;
+  acc.trackId = trackId;
+}
+
+/** Returns and resets the accumulated seconds for the current track. */
+export function drainAccumulator(): { trackId: string | null; seconds: number } {
+  const out = { trackId: acc.trackId, seconds: Math.floor(acc.seconds) };
+  acc.last = -1;
+  acc.seconds = 0;
+  return out;
+}

@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0e13;
+  --surface: #11161d;
+  --surface-2: #18202b;
+  --border: #243040;
+  --foreground: #e8edf4;
+  --muted: #8b98a9;
+  --accent: #38bdf8;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* small component classes */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: filter 0.15s, background 0.15s;
+  cursor: pointer;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #06121c;
+}
+.btn-primary:hover {
+  filter: brightness(1.12);
+}
+.btn-ghost {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+}
+.btn-ghost:hover {
+  background: var(--surface-2);
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  width: 2rem;
+  border-radius: 9999px;
+  color: var(--muted);
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+}
+.btn-icon:hover {
+  background: var(--surface-2);
+  color: var(--foreground);
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  color: var(--foreground);
+  outline: none;
+}
+.input:focus {
+  border-color: var(--accent);
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}

@@ -1,0 +1,132 @@
+import type { Metadata, Viewport } from "next";
+import Link from "next/link";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import { Player } from "@/components/Player";
+import { SWRegister } from "@/components/SWRegister";
+import { logoutAction } from "@/app/actions";
+import { getCurrentUser } from "@/lib/auth";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: {
+    default: "Life Stream",
+    template: "%s · Life Stream",
+  },
+  description: "Music from our church community — listen, like, and share.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Life Stream",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icons/apple-touch-icon.png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0e13",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
+function Logo() {
+  return (
+    <Link href="/" className="flex shrink-0 items-center gap-2 font-bold">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+        <defs>
+          <linearGradient id="ls-logo" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" stopColor="#38bdf8" />
+            <stop offset="1" stopColor="#a78bfa" />
+          </linearGradient>
+        </defs>
+        <rect width="24" height="24" rx="6" fill="#0c4a6e" opacity="0.55" />
+        <rect x="4" y="10" width="3" height="7" rx="1.5" fill="url(#ls-logo)" />
+        <rect x="10" y="5" width="3" height="14" rx="1.5" fill="url(#ls-logo)" />
+        <rect x="16" y="8" width="3" height="9" rx="1.5" fill="url(#ls-logo)" />
+      </svg>
+      <span>Life Stream</span>
+    </Link>
+  );
+}
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const user = await getCurrentUser().catch(() => null);
+
+  return (
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="flex min-h-full flex-col">
+        <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
+          <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4">
+            <Logo />
+            <form action="/search" className="ml-auto hidden w-full max-w-xs sm:block" role="search">
+              <input
+                className="input !py-1.5"
+                type="search"
+                name="q"
+                placeholder="Search songs, artists…"
+                aria-label="Search"
+              />
+            </form>
+            <nav className="ml-auto flex shrink-0 items-center gap-1 sm:ml-3">
+              {user ? (
+                <>
+                  <Link href="/library" className="btn btn-ghost !px-3 !py-1.5">
+                    Library
+                  </Link>
+                  <Link
+                    href={`/u/${user.handle}`}
+                    className="hidden max-w-32 truncate text-sm text-muted hover:text-foreground md:block"
+                  >
+                    {user.displayName}
+                  </Link>
+                  <form action={logoutAction}>
+                    <button type="submit" className="btn btn-ghost !px-3 !py-1.5">
+                      Log out
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="btn btn-ghost !px-3 !py-1.5">
+                    Sign in
+                  </Link>
+                  <Link href="/register" className="btn btn-primary !px-3 !py-1.5">
+                    Join
+                  </Link>
+                </>
+              )}
+            </nav>
+          </div>
+        </header>
+
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6">{children}</main>
+
+        <footer className="border-t border-border py-6 pb-28 text-center text-xs text-muted">
+          Life Stream — music from our church community ·{" "}
+          <a href="mailto:support@lifestream.example" className="hover:underline">
+            support
+          </a>
+        </footer>
+
+        <Player />
+        <SWRegister />
+      </body>
+    </html>
+  );
+}
