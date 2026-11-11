@@ -164,21 +164,22 @@ async function audioHandler(req) {
     const isFullGet = rh === "";
     const isOpenFromZero = /^bytes=0-$/.test(rh.trim());
     if (isFullGet || isOpenFromZero) {
-      try {
-        const body = await resp.clone().arrayBuffer();
-        const headers = new Headers(resp.headers);
-        headers.delete("content-range");
-        headers.set("accept-ranges", "bytes");
-        const normalized = new Response(body, { status: 200, headers });
-        const cache = await caches.open(AUDIO);
-        await cache.put(cacheKey, normalized.clone());
-        trimAudioCache(cache);
-      } catch {
-        /* caching best-effort */
-      }
+      // Cache in the background — never block the response going back to the
+      // media element, or playback/advancing stalls behind the full download.
+      cacheFullResponse(resp.clone(), cacheKey).catch(() => {});
     }
   }
   return resp;
+}
+
+async function cacheFullResponse(src, cacheKey) {
+  const body = await src.arrayBuffer();
+  const headers = new Headers(src.headers);
+  headers.delete("content-range");
+  headers.set("accept-ranges", "bytes");
+  const cache = await caches.open(AUDIO);
+  await cache.put(cacheKey, new Response(body, { status: 200, headers }));
+  await trimAudioCache(cache);
 }
 
 /** Build a 206 from a cached full-body response. Returns null if unparseable. */

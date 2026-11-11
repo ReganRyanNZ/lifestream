@@ -11,17 +11,21 @@ export function TrackList({
   showArtist = true,
   numbered = false,
   authed = false,
+  station = false,
   onRemove = null,
 }: {
   tracks: TrackDTO[];
   showArtist?: boolean;
   numbered?: boolean;
   authed?: boolean;
+  /** station=true: clicking a row seeds a popularity-weighted radio queue from all songs instead of playing this list in order */
+  station?: boolean;
   onRemove?: ((trackId: string) => void) | null;
 }) {
   const currentId = usePlayer((s) => s.queue[s.index]?.id);
   const playing = usePlayer((s) => s.playing);
   const playQueue = usePlayer((s) => s.playQueue);
+  const playStation = usePlayer((s) => s.playStation);
   const toggle = usePlayer((s) => s.toggle);
 
   if (tracks.length === 0) {
@@ -41,7 +45,9 @@ export function TrackList({
             }`}
           >
             <button
-              onClick={() => (isCurrent ? toggle() : playQueue(tracks, i))}
+              onClick={() =>
+                isCurrent ? toggle() : station ? playStation(t) : playQueue(tracks, i)
+              }
               aria-label={isPlaying ? `Pause ${t.title}` : `Play ${t.title}`}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/80 transition hover:bg-accent hover:text-[#06121c]"
             >

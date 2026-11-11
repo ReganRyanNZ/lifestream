@@ -4,7 +4,7 @@ import { Cover } from "@/components/Cover";
 import { LikeButton } from "@/components/LikeButton";
 import { TrackList } from "@/components/TrackList";
 import { AddToPlaylist } from "@/components/AddToPlaylist";
-import { PlayAllButton } from "@/components/PlayButtons";
+import { PlayAllButton, PlayTrackButton } from "@/components/PlayButtons";
 import { getCurrentUser } from "@/lib/auth";
 import { getPlaylistsFor, getTrackById, getUserByHandle, getUserTracks } from "@/lib/queries";
 import { fmtDuration, fmtPlays } from "@/lib/format";
@@ -63,7 +63,7 @@ export default async function TrackPage({ params }: PageProps<"/track/[id]">) {
             {fmtDuration(track.durationSec)}
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <PlayAllButton tracks={[track]} label="Play" />
+            <PlayTrackButton track={track} />
             <LikeButton
               trackId={track.id}
               initialLiked={!!track.liked}

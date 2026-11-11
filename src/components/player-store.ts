@@ -10,6 +10,8 @@ type PlayerState = {
   position: number;
   duration: number;
   playQueue: (tracks: TrackDTO[], startIndex?: number) => void;
+  /** Play one track immediately, then continue with a popularity-weighted "radio" queue drawn from all songs. */
+  playStation: (seed: TrackDTO) => void;
   toggle: () => void;
   next: () => void;
   prev: () => void;
@@ -53,6 +55,31 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     set({ playing: true });
   },
 
+  playStation: (seed) => {
+    // start the seed immediately with a one-track queue…
+    set({ queue: [seed], index: 0, position: 0 });
+    if (audio) {
+      audio.src = seed.audioUrl;
+      audio.play().catch(() => {});
+    }
+    set({ playing: true });
+
+    // …then extend with a popularity-weighted sample of everything, so the
+    // queue (and next-track preload) is ready long before the seed ends.
+    fetch("/api/shuffle")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { tracks?: TrackDTO[] } | null) => {
+        if (!j?.tracks?.length) return;
+        const s = usePlayer.getState();
+        // only extend if the seed is still what's on
+        if (!s.playing || s.queue[s.index]?.id !== seed.id) return;
+        const seen = new Set(s.queue.map((t) => t.id));
+        const rest = j.tracks.filter((t) => !seen.has(t.id));
+        if (rest.length > 0) usePlayer.setState({ queue: [...s.queue, ...rest] });
+      })
+      .catch(() => {});
+  },
+
   toggle: () => {
     if (!audio) return;
     const t = get().queue[get().index];
@@ -94,9 +121,28 @@ let bound = false;
 export function bindAudio() {
   if (!audio || bound) return;
   bound = true;
+
+  let consecutiveErrors = 0;
+
   audio.addEventListener("play", () => usePlayer.setState({ playing: true }));
   audio.addEventListener("pause", () => usePlayer.setState({ playing: false }));
   audio.addEventListener("ended", () => usePlayer.getState().next());
+  audio.addEventListener("playing", () => {
+    consecutiveErrors = 0;
+  });
+
+  // a track that fails to load (bad file, offline, codec) must not silently
+  // stop the queue — skip to the next one, give up after 5 in a row
+  audio.addEventListener("error", () => {
+    const s = usePlayer.getState();
+    if (s.index + 1 < s.queue.length && consecutiveErrors < 5) {
+      consecutiveErrors++;
+      s.next();
+    } else {
+      usePlayer.setState({ playing: false });
+    }
+  });
+
   audio.addEventListener("timeupdate", () =>
     usePlayer.setState({ position: audio.currentTime }),
   );

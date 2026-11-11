@@ -38,6 +38,7 @@ export function Player() {
   const playing = usePlayer((s) => s.playing);
   const position = usePlayer((s) => s.position);
   const duration = usePlayer((s) => s.duration);
+  const queueLength = usePlayer((s) => s.queue.length);
   const toggle = usePlayer((s) => s.toggle);
   const next = usePlayer((s) => s.next);
   const prev = usePlayer((s) => s.prev);
@@ -142,12 +143,13 @@ export function Player() {
   }, [Math.floor(position / 5), duration]);
 
   // preload the next track into the service-worker playback cache (also what
-  // lets background "next track" work on iOS)
+  // lets background "next track" work on iOS). Re-run when the queue extends
+  // (e.g. a station queue arriving right after the seed starts).
   useEffect(() => {
     if (!track) return;
     const nxt = usePlayer.getState().queue[usePlayer.getState().index + 1];
     if (nxt) fetch(nxt.audioUrl).catch(() => {});
-  }, [track?.id]);
+  }, [track?.id, queueLength]);
 
   const onSeekInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

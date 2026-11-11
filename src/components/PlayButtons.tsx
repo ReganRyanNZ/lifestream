@@ -4,6 +4,30 @@ import { useState } from "react";
 import { usePlayer } from "@/components/player-store";
 import type { TrackDTO } from "@/lib/types";
 
+/**
+ * Play a single track: starts it immediately, then continues with a
+ * popularity-weighted radio queue drawn from all songs.
+ */
+export function PlayTrackButton({
+  track,
+  label = "Play",
+  className = "btn btn-primary",
+}: {
+  track: TrackDTO;
+  label?: string;
+  className?: string;
+}) {
+  const playStation = usePlayer((s) => s.playStation);
+  return (
+    <button onClick={() => playStation(track)} className={className} aria-label={label}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <path d="M7 4l13 8-13 8z" />
+      </svg>
+      {label}
+    </button>
+  );
+}
+
 export function PlayAllButton({
   tracks,
   label = "Play all",
