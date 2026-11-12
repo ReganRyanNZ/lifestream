@@ -3,7 +3,7 @@ import { Cover } from "@/components/Cover";
 import { SearchBox } from "@/components/SearchBox";
 import { TrackList } from "@/components/TrackList";
 import { getCurrentUser } from "@/lib/auth";
-import { getTopTracks, searchEverything } from "@/lib/queries";
+import { getPopularTracks, searchEverything } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export default async function SearchPage({
   const user = await getCurrentUser().catch(() => null);
 
   if (!q) {
-    const top = await getTopTracks(10);
+    const top = await getPopularTracks(10, 40);
     return (
       <div className="flex flex-col gap-6">
         <div>
@@ -33,8 +33,8 @@ export default async function SearchPage({
         />
         {top.length > 0 && (
           <section>
-            <h2 className="section-title">Most played right now</h2>
-            <TrackList tracks={top} authed={!!user} />
+            <h2 className="section-title">Popular right now</h2>
+            <TrackList tracks={top} authed={!!user} station />
           </section>
         )}
       </div>

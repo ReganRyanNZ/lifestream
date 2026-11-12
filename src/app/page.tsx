@@ -1,19 +1,18 @@
 import Link from "next/link";
-import { CoverPlayButton } from "@/components/CoverPlayButton";
+import { RecentlyPlayed } from "@/components/RecentlyPlayed";
 import { TrackList } from "@/components/TrackList";
 import { ShuffleButton } from "@/components/PlayButtons";
 import { getCurrentUser } from "@/lib/auth";
-import { getRecentTracks, getTopTracks, siteStats } from "@/lib/queries";
+import { getPopularTracks, siteStats } from "@/lib/queries";
 import { fmtPlays } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [user, stats, recent, top] = await Promise.all([
+  const [user, stats, popular] = await Promise.all([
     getCurrentUser().catch(() => null),
     siteStats(),
-    getRecentTracks(18),
-    getTopTracks(10),
+    getPopularTracks(10, 40),
   ]);
 
   const hours = Math.round(stats.totalSeconds / 3600);
@@ -37,35 +36,25 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {recent.length > 0 && (
+      <RecentlyPlayed />
+
+      {popular.length > 0 && (
         <section>
-          <h2 className="section-title">Recently added</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {recent.slice(0, 12).map((t) => (
-              <div key={t.id} className="flex flex-col gap-2">
-                <CoverPlayButton track={t} />
-                <Link
-                  href={`/track/${t.id}`}
-                  className="truncate text-sm font-medium hover:text-accent"
-                >
-                  {t.title}
-                </Link>
-                <Link
-                  href={`/u/${t.handle}`}
-                  className="-mt-2 truncate text-xs text-muted hover:text-foreground"
-                >
-                  {t.artist}
-                </Link>
-              </div>
-            ))}
-          </div>
+          <h2 className="section-title">Popular songs</h2>
+          <TrackList tracks={popular} authed={!!user} station />
+          <p className="px-2 pt-2 text-xs text-muted">
+            A rotating pick from the most-played songs over the last 30 days.
+          </p>
         </section>
       )}
 
-      {top.length > 0 && (
-        <section>
-          <h2 className="section-title">Most played</h2>
-          <TrackList tracks={top} authed={!!user} station />
+      {popular.length === 0 && (
+        <section className="card max-w-xl p-4 text-sm text-muted">
+          Nothing has been played yet —{" "}
+          <Link href="/search" className="text-accent hover:underline">
+            browse the library
+          </Link>{" "}
+          and press play.
         </section>
       )}
     </div>

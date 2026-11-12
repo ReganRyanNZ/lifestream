@@ -1,6 +1,6 @@
-import { and, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { albums, likes, playlistTracks, playlists, tracks, users } from "@/db/schema";
+import { albums, likes, playEvents, playlistTracks, playlists, tracks, users } from "@/db/schema";
 import { publicUrlFor } from "@/lib/storage";
 import type { AlbumDTO, TrackDTO } from "@/lib/types";
 
@@ -78,6 +78,69 @@ export async function getTopTracks(limit = 10): Promise<TrackDTO[]> {
     .orderBy(desc(tracks.playCount), desc(tracks.likeCount))
     .limit(limit);
   return rows.map((r) => toDTO(r));
+}
+
+/**
+ * "Popular" = plays counted in the last 30 days (rolling, so newly uploaded
+ * songs can chart). To keep the section from being a static top-10, we draw a
+ * random sample from a larger pool of the most-played. When 30-day data is
+ * thin, the pool is padded from all-time popularity.
+ */
+export async function getPopularTracks(limit = 10, poolSize = 40): Promise<TrackDTO[]> {
+  const recentRows = await db
+    .select({ id: playEvents.trackId, plays: sql<number>`count(*)::int` })
+    .from(playEvents)
+    .where(
+      and(
+        eq(playEvents.counted, true),
+        sql`${playEvents.playedAt} > now() - interval '30 days'`,
+      ),
+    )
+    .groupBy(playEvents.trackId);
+
+  const recentSorted = [...recentRows].sort((a, b) => b.plays - a.plays);
+  let poolIds = recentSorted.slice(0, poolSize).map((r) => r.id);
+
+  if (poolIds.length < poolSize) {
+    const fill = await db
+      .select({ id: tracks.id })
+      .from(tracks)
+      .where(
+        and(
+          eq(tracks.isPublished, true),
+          poolIds.length > 0 ? notInArray(tracks.id, poolIds) : undefined,
+        ),
+      )
+      .orderBy(desc(tracks.playCount), desc(tracks.likeCount), desc(tracks.createdAt))
+      .limit(poolSize - poolIds.length);
+    poolIds = poolIds.concat(fill.map((r) => r.id));
+  }
+
+  // Fisher–Yates sample so the section refreshes between visits
+  const shuffled = [...poolIds];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return getTracksByIdsOrdered(shuffled.slice(0, limit));
+}
+
+/** This listener's most recent tracks (by account and/or device), newest first, deduped. */
+export async function getRecentlyPlayed(
+  userId: string | null,
+  clientUuid: string,
+  limit = 12,
+): Promise<TrackDTO[]> {
+  const conds = [eq(playEvents.clientUuid, clientUuid), gte(playEvents.secondsPlayed, 5)];
+  if (userId) conds.push(eq(playEvents.userId, userId));
+  const rows = await db
+    .select({ id: playEvents.trackId, last: sql<string>`max(${playEvents.playedAt})` })
+    .from(playEvents)
+    .where(or(...conds))
+    .groupBy(playEvents.trackId)
+    .orderBy(desc(sql`max(${playEvents.playedAt})`))
+    .limit(limit);
+  return getTracksByIdsOrdered(rows.map((r) => r.id));
 }
 
 export async function getTrackById(id: string, userId?: string): Promise<TrackDTO | null> {
