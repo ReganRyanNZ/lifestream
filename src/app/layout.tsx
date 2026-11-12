@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Player } from "@/components/Player";
 import { SWRegister } from "@/components/SWRegister";
+import { SearchBox } from "@/components/SearchBox";
 import { logoutAction } from "@/app/actions";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -44,7 +45,7 @@ export const viewport: Viewport = {
 
 function Logo() {
   return (
-    <Link href="/" className="flex shrink-0 items-center gap-2 font-bold">
+    <Link href="/" className="flex shrink-0 items-center gap-2 font-bold" aria-label="Life Stream home">
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
         <defs>
           <linearGradient id="ls-logo" x1="0" y1="1" x2="0" y2="0">
@@ -57,7 +58,7 @@ function Logo() {
         <rect x="10" y="5" width="3" height="14" rx="1.5" fill="url(#ls-logo)" />
         <rect x="16" y="8" width="3" height="9" rx="1.5" fill="url(#ls-logo)" />
       </svg>
-      <span>Life Stream</span>
+      <span className="hidden sm:inline">Life Stream</span>
     </Link>
   );
 }
@@ -72,18 +73,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
-          <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4">
+          <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
             <Logo />
-            <form action="/search" className="ml-auto hidden w-full max-w-xs sm:block" role="search">
-              <input
-                className="input !py-1.5"
-                type="search"
-                name="q"
-                placeholder="Search songs, artists…"
-                aria-label="Search"
-              />
-            </form>
-            <nav className="ml-auto flex shrink-0 items-center gap-1 sm:ml-3">
+            <SearchBox className="min-w-0 w-full flex-1 sm:ml-auto sm:w-64 sm:flex-none" />
+            <nav className="flex shrink-0 items-center gap-1">
               {user ? (
                 <>
                   <Link href="/library" className="btn btn-ghost !px-3 !py-1.5">

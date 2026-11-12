@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Cover } from "@/components/Cover";
+import { SearchBox } from "@/components/SearchBox";
 import { TrackList } from "@/components/TrackList";
 import { getCurrentUser } from "@/lib/auth";
 import { getTopTracks, searchEverything } from "@/lib/queries";
@@ -25,19 +26,11 @@ export default async function SearchPage({
             Find songs, artists, and albums. Try a hymn name or a person.
           </p>
         </div>
-        <form action="/search" className="flex gap-2" role="search">
-          <input
-            className="input"
-            name="q"
-            type="search"
-            placeholder="Search…"
-            autoFocus
-            aria-label="Search"
-          />
-          <button type="submit" className="btn btn-primary shrink-0">
-            Search
-          </button>
-        </form>
+        <SearchBox
+          autoFocus
+          inputClassName="input"
+          className="flex w-full max-w-md gap-2"
+        />
         {top.length > 0 && (
           <section>
             <h2 className="section-title">Most played right now</h2>

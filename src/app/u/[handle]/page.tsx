@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cover } from "@/components/Cover";
 import { TrackList } from "@/components/TrackList";
@@ -58,7 +59,7 @@ export default async function UserPage({ params }: PageProps<"/u/[handle]">) {
             {albums
               .filter((a) => a.trackCount > 0)
               .map((a) => (
-                <a key={a.id} href={`/album/${a.id}`} className="group flex flex-col gap-2">
+                <Link key={a.id} href={`/album/${a.id}`} className="group flex flex-col gap-2">
                   <Cover
                     title={a.title}
                     artworkUrl={a.artworkUrl}
@@ -71,7 +72,7 @@ export default async function UserPage({ params }: PageProps<"/u/[handle]">) {
                   <span className="-mt-2 text-xs text-muted">
                     {a.trackCount} {a.trackCount === 1 ? "song" : "songs"}
                   </span>
-                </a>
+                </Link>
               ))}
           </div>
         </section>

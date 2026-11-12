@@ -34,9 +34,6 @@ export default async function HomePage() {
             label="Shuffle everything"
             className="btn btn-primary !px-5 !py-2.5"
           />
-          <Link href="/search" className="btn btn-ghost !px-5 !py-2.5">
-            Browse & search
-          </Link>
         </div>
       </section>
 

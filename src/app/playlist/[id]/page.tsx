@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TrackList } from "@/components/TrackList";
 import { PlayAllButton, ShuffleButton } from "@/components/PlayButtons";
@@ -37,9 +38,9 @@ export default async function PlaylistPage({ params }: PageProps<"/playlist/[id]
           <h1 className="mt-1 text-2xl font-bold sm:text-4xl">{playlist.title}</h1>
           <p className="mt-2 text-sm text-muted">
             by{" "}
-            <a href={`/u/${playlist.ownerHandle}`} className="text-foreground hover:underline">
+            <Link href={`/u/${playlist.ownerHandle}`} className="text-foreground hover:underline">
               {playlist.ownerName}
-            </a>{" "}
+            </Link>{" "}
             · {tracks.length} {tracks.length === 1 ? "song" : "songs"}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -68,7 +69,7 @@ export default async function PlaylistPage({ params }: PageProps<"/playlist/[id]
           }}
         />
       ) : (
-        <TrackList tracks={tracks} authed={!!viewer} />
+        <TrackList tracks={tracks} authed={!!viewer} contextKind="playlist" />
       )}
     </div>
   );

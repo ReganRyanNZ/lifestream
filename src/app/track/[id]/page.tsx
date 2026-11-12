@@ -2,12 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cover } from "@/components/Cover";
 import { LikeButton } from "@/components/LikeButton";
-import { TrackList } from "@/components/TrackList";
 import { AddToPlaylist } from "@/components/AddToPlaylist";
-import { PlayAllButton, PlayTrackButton } from "@/components/PlayButtons";
+import { PlayTrackButton } from "@/components/PlayButtons";
+import { UpNext } from "@/components/UpNext";
 import { getCurrentUser } from "@/lib/auth";
-import { getPlaylistsFor, getTrackById, getUserByHandle, getUserTracks } from "@/lib/queries";
+import { getAlbumTracks, getPlaylistsFor, getTrackById } from "@/lib/queries";
 import { fmtDuration, fmtPlays } from "@/lib/format";
+import type { TrackDTO } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -23,13 +24,12 @@ export default async function TrackPage({ params }: PageProps<"/track/[id]">) {
   if (!track) notFound();
 
   const user = await getCurrentUser().catch(() => null);
-  const artist = await getUserByHandle(track.handle);
-  const [playlists, artistTracks] = await Promise.all([
+  const [playlists, albumTracks] = await Promise.all([
     user ? getPlaylistsFor(user.id) : Promise.resolve([]),
-    artist ? getUserTracks(artist.id) : Promise.resolve([]),
+    track.albumId
+      ? getAlbumTracks(track.albumId).catch(() => [] as TrackDTO[])
+      : Promise.resolve([] as TrackDTO[]),
   ]);
-
-  const more = artistTracks.filter((t) => t.id !== track.id).slice(0, 10);
 
   return (
     <div className="flex flex-col gap-10">
@@ -74,12 +74,7 @@ export default async function TrackPage({ params }: PageProps<"/track/[id]">) {
         </div>
       </header>
 
-      {more.length > 0 && (
-        <section>
-          <h2 className="section-title">More from {track.artist}</h2>
-          <TrackList tracks={more} showArtist={false} authed={!!user} />
-        </section>
-      )}
+      <UpNext track={track} albumTracks={albumTracks.length > 0 ? albumTracks : undefined} />
     </div>
   );
 }

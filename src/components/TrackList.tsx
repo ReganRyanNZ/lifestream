@@ -12,6 +12,7 @@ export function TrackList({
   numbered = false,
   authed = false,
   station = false,
+  contextKind = "list",
   onRemove = null,
 }: {
   tracks: TrackDTO[];
@@ -20,6 +21,8 @@ export function TrackList({
   authed?: boolean;
   /** station=true: clicking a row seeds a popularity-weighted radio queue from all songs instead of playing this list in order */
   station?: boolean;
+  /** labels the queue context in "Up next" when these rows are playing */
+  contextKind?: "album" | "playlist" | "list";
   onRemove?: ((trackId: string) => void) | null;
 }) {
   const currentId = usePlayer((s) => s.queue[s.index]?.id);
@@ -46,7 +49,11 @@ export function TrackList({
           >
             <button
               onClick={() =>
-                isCurrent ? toggle() : station ? playStation(t) : playQueue(tracks, i)
+                isCurrent
+                  ? toggle()
+                  : station
+                    ? playStation(t)
+                    : playQueue(tracks, i, contextKind)
               }
               aria-label={isPlaying ? `Pause ${t.title}` : `Play ${t.title}`}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/80 transition hover:bg-accent hover:text-[#06121c]"

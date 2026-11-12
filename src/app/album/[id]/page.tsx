@@ -59,7 +59,13 @@ export default async function AlbumPage({ params }: PageProps<"/album/[id]">) {
         </div>
       </header>
 
-      <TrackList tracks={tracks} showArtist={false} numbered authed={!!viewer} />
+      <TrackList
+        tracks={tracks}
+        showArtist={false}
+        numbered
+        authed={!!viewer}
+        contextKind="album"
+      />
     </div>
   );
 }

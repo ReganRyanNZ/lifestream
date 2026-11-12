@@ -3,15 +3,23 @@
 import { create } from "zustand";
 import type { TrackDTO } from "@/lib/types";
 
+/** What the current queue represents — shown as "Up next: …" and switchable. */
+export type PlayContextKind = "station" | "album" | "playlist" | "list";
+
 type PlayerState = {
   queue: TrackDTO[];
   index: number;
   playing: boolean;
   position: number;
   duration: number;
-  playQueue: (tracks: TrackDTO[], startIndex?: number) => void;
+  contextKind: PlayContextKind | null;
+  playQueue: (tracks: TrackDTO[], startIndex?: number, kind?: PlayContextKind) => void;
   /** Play one track immediately, then continue with a popularity-weighted "radio" queue drawn from all songs. */
   playStation: (seed: TrackDTO) => void;
+  /** Swap the queue behind the currently playing song (it keeps playing, uninterrupted). */
+  switchToQueue: (tracks: TrackDTO[], kind: PlayContextKind) => void;
+  /** Rebuild the queue behind the current song as a fresh radio mix. */
+  regenerateStation: () => void;
   toggle: () => void;
   next: () => void;
   prev: () => void;
@@ -40,11 +48,12 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   playing: false,
   position: 0,
   duration: 0,
+  contextKind: null,
 
-  playQueue: (tracks, startIndex = 0) => {
+  playQueue: (tracks, startIndex = 0, kind = "list") => {
     if (tracks.length === 0) return;
     const index = Math.min(Math.max(startIndex, 0), tracks.length - 1);
-    set({ queue: tracks, index, position: 0 });
+    set({ queue: tracks, index, position: 0, contextKind: kind });
     const t = tracks[index];
     if (audio) {
       if (!audio.src || new URL(audio.src).href !== new URL(t.audioUrl, location.href).href) {
@@ -57,7 +66,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
   playStation: (seed) => {
     // start the seed immediately with a one-track queue…
-    set({ queue: [seed], index: 0, position: 0 });
+    set({ queue: [seed], index: 0, position: 0, contextKind: "station" });
     if (audio) {
       audio.src = seed.audioUrl;
       audio.play().catch(() => {});
@@ -76,6 +85,32 @@ export const usePlayer = create<PlayerState>((set, get) => ({
         const seen = new Set(s.queue.map((t) => t.id));
         const rest = j.tracks.filter((t) => !seen.has(t.id));
         if (rest.length > 0) usePlayer.setState({ queue: [...s.queue, ...rest] });
+      })
+      .catch(() => {});
+  },
+
+  switchToQueue: (tracks, kind) => {
+    const cur = usePlayer.getState().queue[usePlayer.getState().index];
+    const pos = cur ? tracks.findIndex((t) => t.id === cur.id) : -1;
+    if (pos >= 0) {
+      // keep the current song playing; only what comes after it changes
+      usePlayer.setState({ queue: tracks.slice(pos), index: 0, contextKind: kind });
+    } else {
+      usePlayer.getState().playQueue(tracks, 0, kind);
+    }
+  },
+
+  regenerateStation: () => {
+    const cur = usePlayer.getState().queue[usePlayer.getState().index];
+    if (!cur) return;
+    fetch("/api/shuffle")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { tracks?: TrackDTO[] } | null) => {
+        if (!j?.tracks?.length) return;
+        const s = usePlayer.getState();
+        if (s.queue[s.index]?.id !== cur.id) return;
+        const rest = j.tracks.filter((t) => t.id !== cur.id);
+        usePlayer.setState({ queue: [cur, ...rest], index: 0, contextKind: "station" });
       })
       .catch(() => {});
   },
