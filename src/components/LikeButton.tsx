@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toggleLike } from "@/app/actions";
+import { recordPreference } from "@/components/player-store";
 
 export function LikeButton({
   trackId,
@@ -28,6 +29,8 @@ export function LikeButton({
       try {
         const r = await toggleLike(trackId);
         setLiked(r.liked);
+        // likes also boost the song in this listener's radio mixes
+        recordPreference(trackId, r.liked ? "like" : "unlike");
       } catch {
         setLiked(liked); // revert
       }

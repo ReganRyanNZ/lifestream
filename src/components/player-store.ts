@@ -75,7 +75,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
     // …then extend with a popularity-weighted sample of everything, so the
     // queue (and next-track preload) is ready long before the seed ends.
-    fetch("/api/shuffle")
+    fetch(`/api/shuffle?client=${encodeURIComponent(getClientUuid())}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j: { tracks?: TrackDTO[] } | null) => {
         if (!j?.tracks?.length) return;
@@ -103,7 +103,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   regenerateStation: () => {
     const cur = usePlayer.getState().queue[usePlayer.getState().index];
     if (!cur) return;
-    fetch("/api/shuffle")
+    fetch(`/api/shuffle?client=${encodeURIComponent(getClientUuid())}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j: { tracks?: TrackDTO[] } | null) => {
         if (!j?.tracks?.length) return;
@@ -125,9 +125,19 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   next: () => {
-    const { index, queue } = get();
+    const { index, queue, position, duration, playing } = get();
+    const cur = queue[index];
+
+    // skipping a song early (well before its end) tells the radio to play it
+    // less for this listener — natural track-end never triggers this
+    if (cur && playing) {
+      const dur = duration || cur.durationSec || 0;
+      const threshold = Math.min(20, Math.max(2, dur * 0.35));
+      if (position < threshold) recordPreference(cur.id, "skip");
+    }
+
     if (index + 1 < queue.length) {
-      get().playQueue(queue, index + 1);
+      get().playQueue(queue, index + 1, get().contextKind ?? "list");
     } else {
       set({ playing: false });
       audio?.pause();
@@ -139,7 +149,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     if (position > 3 || index === 0) {
       get().seek(0);
     } else {
-      get().playQueue(queue, index - 1);
+      get().playQueue(queue, index - 1, get().contextKind ?? "list");
     }
   },
 
@@ -196,6 +206,25 @@ export function getClientUuid(): string {
     localStorage.setItem("ls-client-uuid", id);
   }
   return id;
+}
+
+/** Fire-and-forget taste signal (skip / like / unlike) for radio weighting. */
+export function recordPreference(trackId: string, kind: "skip" | "like" | "unlike") {
+  try {
+    const body = JSON.stringify({ trackId, kind, clientUuid: getClientUuid() });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/preferences", new Blob([body], { type: "application/json" }));
+    } else {
+      fetch("/api/preferences", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch {
+    /* best effort */
+  }
 }
 
 /** Approximate listened-seconds accumulator for the current track. */

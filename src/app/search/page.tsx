@@ -80,7 +80,7 @@ export default async function SearchPage({
       {results.albums.length > 0 && (
         <section>
           <h2 className="section-title">Albums</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
+          <div className="cover-grid">
             {results.albums.map((a) => (
               <Link key={a.id} href={`/album/${a.id}`} className="group flex flex-col gap-2">
                 <Cover title={a.title} artworkUrl={a.artworkUrl} color={a.color} />

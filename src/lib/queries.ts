@@ -1,6 +1,15 @@
 import { and, desc, eq, gte, ilike, inArray, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { albums, likes, playEvents, playlistTracks, playlists, tracks, users } from "@/db/schema";
+import {
+  albums,
+  likes,
+  playEvents,
+  playlistTracks,
+  playlists,
+  trackPreferences,
+  tracks,
+  users,
+} from "@/db/schema";
 import { publicUrlFor } from "@/lib/storage";
 import type { AlbumDTO, TrackDTO } from "@/lib/types";
 
@@ -158,10 +167,26 @@ export async function getTrackById(id: string, userId?: string): Promise<TrackDT
   return toDTO(rows[0], liked);
 }
 
-export async function getTracksByIdsOrdered(ids: string[]): Promise<TrackDTO[]> {
+export async function getTracksByIdsOrdered(
+  ids: string[],
+  userId?: string | null,
+): Promise<TrackDTO[]> {
   if (ids.length === 0) return [];
   const rows = await baseTrackQuery().where(inArray(tracks.id, ids));
-  const byId = new Map(rows.map((r) => [r.id, toDTO(r)]));
+  let likedIds: Set<string> = new Set();
+  if (userId && ids.length > 0) {
+    const l = await db
+      .select({ trackId: likes.trackId })
+      .from(likes)
+      .where(
+        and(
+          eq(likes.userId, userId),
+          inArray(likes.trackId, ids),
+        ),
+      );
+    likedIds = new Set(l.map((r) => r.trackId));
+  }
+  const byId = new Map(rows.map((r) => [r.id, toDTO(r, likedIds.has(r.id))]));
   return ids.map((id) => byId.get(id)).filter((t): t is TrackDTO => !!t);
 }
 
@@ -190,6 +215,28 @@ export async function getUserAlbums(userId: string): Promise<AlbumDTO[]> {
     artworkUrl: a.artworkKey ? publicUrlFor(a.artworkKey) : null,
     color: a.color,
     trackCount: a.trackCount,
+  }));
+}
+
+/** A rotating random sample of albums for the home row. */
+export async function getRandomAlbums(limit = 12) {
+  const rows = await db
+    .select({
+      id: albums.id,
+      title: albums.title,
+      artworkKey: albums.artworkKey,
+      color: albums.color,
+      artist: sql<string>`coalesce(${users.artistName}, ${users.displayName})`,
+      handle: users.handle,
+    })
+    .from(albums)
+    .innerJoin(users, eq(albums.userId, users.id))
+    .where(sql`exists (select 1 from tracks t where t.album_id = ${albums.id} and t.is_published)`)
+    .orderBy(sql`random()`)
+    .limit(limit);
+  return rows.map((a) => ({
+    ...a,
+    artworkUrl: a.artworkKey ? publicUrlFor(a.artworkKey) : null,
   }));
 }
 
@@ -287,19 +334,25 @@ export type ShuffleScope =
 
 /**
  * Popularity-skewed shuffle: weighted sampling without replacement via
- * exponential ordering — weight = plays + 2×likes + 5, exponent 1 (tempered
- * by the +5 smoothing so new/quiet tracks still surface). Tune constants
- * once real play data exists.
+ * exponential ordering. Base weight = plays + 2×likes + 5 (smoothing keeps
+ * quiet tracks alive). When a clientUuid is given (radio mixes), that weight
+ * is multiplied by 2^preference for this listener: likes boost, early skips
+ * demote — downweighted, never excluded.
  */
-export async function shuffledTrackIds(scope: ShuffleScope, limit = 80): Promise<string[]> {
-  const weight = sql`(${tracks.playCount} + 2 * ${tracks.likeCount} + 5)::float`;
-  const order = sql`-ln(greatest(random(), 1e-9)) / ${weight} asc`;
-
+export async function shuffledTrackIds(
+  scope: ShuffleScope,
+  limit = 80,
+  clientUuid?: string,
+): Promise<string[]> {
   let where: SQL<unknown> | undefined = eq(tracks.isPublished, true);
   if (scope.kind === "user") where = and(where, eq(tracks.userId, scope.id));
   if (scope.kind === "album") where = and(where, eq(tracks.albumId, scope.id));
 
   if (scope.kind === "playlist" || scope.kind === "liked") {
+    // explicit contexts: the listener chose this list — no preference bending
+    const weight = sql`(${tracks.playCount} + 2 * ${tracks.likeCount} + 5)::float`;
+    const order = sql`-ln(greatest(random(), 1e-9)) / ${weight} asc`;
+
     let list: string[];
     if (scope.kind === "playlist") {
       const rows = await db
@@ -324,11 +377,23 @@ export async function shuffledTrackIds(scope: ShuffleScope, limit = 80): Promise
     return rows.map((r) => r.id);
   }
 
+  const prefWeight = sql`((${tracks.playCount} + 2 * ${tracks.likeCount} + 5) * coalesce(2 ^ ${trackPreferences.weight}, 1))::float`;
+  const prefOrder = sql`-ln(greatest(random(), 1e-9)) / ${prefWeight} asc`;
+
   const rows = await db
     .select({ id: tracks.id })
     .from(tracks)
+    .leftJoin(
+      trackPreferences,
+      clientUuid
+        ? and(
+            eq(trackPreferences.trackId, tracks.id),
+            eq(trackPreferences.clientUuid, clientUuid),
+          )
+        : sql`false`,
+    )
     .where(where)
-    .orderBy(order)
+    .orderBy(prefOrder)
     .limit(limit);
   return rows.map((r) => r.id);
 }

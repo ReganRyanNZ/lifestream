@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { usePlayer } from "@/components/player-store";
+import { getClientUuid, usePlayer } from "@/components/player-store";
 import type { TrackDTO } from "@/lib/types";
 
 /**
@@ -55,10 +55,12 @@ export function PlayAllButton({
 export function ShuffleButton({
   scope,
   label = "Shuffle",
+  icon = "shuffle",
   className = "btn btn-ghost",
 }: {
   scope?: { kind: "user" | "album" | "playlist" | "liked"; id: string };
   label?: string;
+  icon?: "shuffle" | "play";
   className?: string;
 }) {
   const playQueue = usePlayer((s) => s.playQueue);
@@ -67,8 +69,8 @@ export function ShuffleButton({
   async function go() {
     setLoading(true);
     try {
-      const qs = scope ? `?scope=${scope.kind}&id=${scope.id}` : "";
-      const r = await fetch(`/api/shuffle${qs}`);
+      const qs = scope ? `?scope=${scope.kind}&id=${scope.id}` : "?scope=all";
+      const r = await fetch(`/api/shuffle${qs}&client=${encodeURIComponent(getClientUuid())}`);
       const j = (await r.json()) as { tracks: TrackDTO[] };
       if (j.tracks?.length) playQueue(j.tracks, 0);
     } catch {
@@ -80,9 +82,15 @@ export function ShuffleButton({
 
   return (
     <button onClick={go} className={className} aria-label={label} disabled={loading}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
-      </svg>
+      {icon === "play" ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M7 4l13 8-13 8z" />
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+        </svg>
+      )}
       {loading ? "Shuffling…" : label}
     </button>
   );

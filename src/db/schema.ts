@@ -160,3 +160,26 @@ export const playEvents = pgTable(
     index("play_events_user_idx").on(t.userId),
   ],
 );
+
+/**
+ * Per-listener taste for radio weighting, keyed on the device's client UUID
+ * (works signed-in or not; user_id kept for future account merging).
+ * weight ∈ [-5, 5]: early-skip −1, like +2, unlike −2. Applied to station
+ * sampling as a 2^weight multiplier — downweighted, never banned.
+ */
+export const trackPreferences = pgTable(
+  "track_preferences",
+  {
+    clientUuid: text("client_uuid").notNull(),
+    trackId: uuid("track_id")
+      .notNull()
+      .references(() => tracks.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    weight: doublePrecision("weight").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.clientUuid, t.trackId] }),
+    index("track_prefs_track_idx").on(t.trackId),
+  ],
+);

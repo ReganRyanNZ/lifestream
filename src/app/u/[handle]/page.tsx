@@ -55,7 +55,7 @@ export default async function UserPage({ params }: PageProps<"/u/[handle]">) {
       {albums.length > 0 && (
         <section>
           <h2 className="section-title">Albums</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="cover-grid">
             {albums
               .filter((a) => a.trackCount > 0)
               .map((a) => (
