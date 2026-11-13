@@ -5,7 +5,7 @@ import { usePlayer } from "@/components/player-store";
 import { fmtDuration } from "@/lib/format";
 import type { TrackDTO } from "@/lib/types";
 
-const CONTEXT_LABEL: Record<string, string> = {
+export const CONTEXT_LABEL: Record<string, string> = {
   station: "Radio mix · all songs",
   album: "Album · in order",
   playlist: "Playlist",

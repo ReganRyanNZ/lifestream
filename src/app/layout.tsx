@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Player } from "@/components/Player";
+import { NowPlaying } from "@/components/NowPlaying";
 import { SWRegister } from "@/components/SWRegister";
 import { SearchBox } from "@/components/SearchBox";
 import { logoutAction } from "@/app/actions";
@@ -118,6 +119,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </footer>
 
         <Player />
+        <NowPlaying />
         <SWRegister />
       </body>
     </html>

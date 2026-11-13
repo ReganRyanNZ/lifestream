@@ -13,6 +13,9 @@ type PlayerState = {
   position: number;
   duration: number;
   contextKind: PlayContextKind | null;
+  /** Full-screen "now playing + queue" view is open (YouTube Music style). */
+  nowPlayingOpen: boolean;
+  setNowPlaying: (open: boolean) => void;
   playQueue: (tracks: TrackDTO[], startIndex?: number, kind?: PlayContextKind) => void;
   /** Play one track immediately, then continue with a popularity-weighted "radio" queue drawn from all songs. */
   playStation: (seed: TrackDTO) => void;
@@ -49,6 +52,8 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   position: 0,
   duration: 0,
   contextKind: null,
+  nowPlayingOpen: false,
+  setNowPlaying: (open) => set({ nowPlayingOpen: open }),
 
   playQueue: (tracks, startIndex = 0, kind = "list") => {
     if (tracks.length === 0) return;
