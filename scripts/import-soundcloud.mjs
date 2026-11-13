@@ -45,7 +45,7 @@ const DIR = path.resolve(String(args.get("dir") ?? path.join(process.cwd(), "imp
 const DB_URL = process.env.DATABASE_URL ?? "postgres://regan@localhost:5432/lifestream";
 const OWNER_EMAIL = String(args.get("email") ?? "owner@lifestream.local").toLowerCase();
 const OWNER_HANDLE = "hymnstream";
-const OWNER_NAME = "Hymn Stream";
+const OWNER_NAME = "Life Stream";
 const STORAGE_MODE = process.env.STORAGE_MODE === "r2" ? "r2" : "local";
 const LOCAL_STORAGE = path.join(process.cwd(), ".storage");
 const CACHE_FILE = path.join(DIR, ".artwork-hashes.json");
@@ -261,6 +261,10 @@ let skipped = 0;
 console.log(`\nImporting (db has ${existing.size} of these already)…`);
 
 for (const [h, list] of albumGroups) {
+  // skip groups whose tracks are all imported already — after title merging,
+  // re-creating their original artwork-keyed album would resurrect empties
+  if (!list.some((t) => !existing.has(t.scId))) continue;
+
   let albumRow = await sql`select id from albums where source_artwork_id = ${h}`;
   if (albumRow.length === 0) {
     const title = albumTitles[h] ?? "Untitled set";

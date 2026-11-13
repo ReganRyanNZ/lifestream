@@ -54,6 +54,7 @@ export const albums = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
+    artistName: text("artist_name"), // credited artist; null = the owner's name
     artworkKey: text("artwork_key"),
     color: text("color"),
     // idempotency for the SoundCloud import: the artwork group this album came from

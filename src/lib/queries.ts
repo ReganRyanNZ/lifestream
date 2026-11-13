@@ -226,7 +226,7 @@ export async function getRandomAlbums(limit = 12) {
       title: albums.title,
       artworkKey: albums.artworkKey,
       color: albums.color,
-      artist: sql<string>`coalesce(${users.artistName}, ${users.displayName})`,
+      artist: sql<string>`coalesce(${albums.artistName}, ${users.artistName}, ${users.displayName})`,
       handle: users.handle,
     })
     .from(albums)
@@ -247,7 +247,7 @@ export async function getAlbum(id: string) {
       title: albums.title,
       artworkKey: albums.artworkKey,
       color: albums.color,
-      artist: sql<string>`coalesce(${users.artistName}, ${users.displayName})`,
+      artist: sql<string>`coalesce(${albums.artistName}, ${users.artistName}, ${users.displayName})`,
       handle: users.handle,
     })
     .from(albums)
@@ -295,7 +295,7 @@ export async function searchEverything(q: string) {
         title: albums.title,
         artworkKey: albums.artworkKey,
         color: albums.color,
-        artist: users.displayName,
+        artist: sql<string>`coalesce(${albums.artistName}, ${users.artistName}, ${users.displayName})`,
         handle: users.handle,
       })
       .from(albums)
