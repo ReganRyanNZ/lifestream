@@ -1,27 +1,33 @@
 #!/usr/bin/env node
 /**
- * Import the hymnstream SoundCloud library into Life Stream.
+ * Import a SoundCloud library into Life Stream.
  *
- * Source files come from the yt-dlp bulk download in imports/soundcloud/:
+ * Source files come from a yt-dlp bulk download (see README in imports/):
  * each track has `<scid>.info.json` + `<scid>.<ext>` audio.
  *
- * Albums: the account has no album/playlist metadata on SoundCloud, and every
- * track gets a unique artwork ID even when the same image covers a whole
- * album — so grouping is by artwork CONTENT (sha1 of the image bytes, fetched
- * at t500x500). Identical bytes => same album. Groups of >= 2 become albums;
- * singletons keep their artwork on the track itself.
+ * Albums: these accounts have no album/playlist metadata on SoundCloud, and
+ * every track gets a unique artwork ID even when the same image covers a
+ * whole album — so grouping is by artwork CONTENT (sha1 of the image bytes,
+ * fetched at t500x500). Identical bytes => same album. Groups of >= 2 become
+ * albums; singletons keep their artwork on the track itself.
  *
  * Album titles default to "Untitled set" — pass --titles=path.json mapping
  * content-hash -> title (the dry run prints the hashes), or rename later in
  * the admin UI.
  *
  * Usage:
- *   node scripts/import-soundcloud.mjs --dry
- *   node scripts/import-soundcloud.mjs --email=you@example.com --password=secret
+ *   node scripts/import-soundcloud.mjs --dry --dir=imports/sandlin
+ *   node scripts/import-soundcloud.mjs --dir=imports/sandlin \
+ *     --handle=holliesandlin --name="Hollie Sandlin"
  *   node scripts/import-soundcloud.mjs --titles=album-titles.json
+ *   node scripts/import-soundcloud.mjs --dir=imports/mirror318 --singles \
+ *     --handle=mirror318 --name="Mirror318"
  *
- * Idempotent: tracks keyed on source_sc_id; artwork hashes cached in
- * imports/soundcloud/.artwork-hashes.json; yt-dlp side is resumable.
+ * --singles: skip album grouping entirely (for accounts that release each
+ * song with its own artwork — every track keeps its artwork, no albums).
+ *
+ * Idempotent: tracks keyed on source_sc_id; artwork hashes cached per import
+ * dir in `.artwork-hashes.json`; yt-dlp side is resumable (archive file).
  */
 import { readdir, readFile, stat, mkdir, copyFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -41,11 +47,12 @@ for (const a of process.argv.slice(2)) {
 }
 
 const DRY = args.has("dry");
+const SINGLES = args.has("singles");
 const DIR = path.resolve(String(args.get("dir") ?? path.join(process.cwd(), "imports/soundcloud")));
 const DB_URL = process.env.DATABASE_URL ?? "postgres://regan@localhost:5432/lifestream";
-const OWNER_EMAIL = String(args.get("email") ?? "owner@lifestream.local").toLowerCase();
-const OWNER_HANDLE = "hymnstream";
-const OWNER_NAME = "Life Stream";
+const OWNER_HANDLE = String(args.get("handle") ?? "hymnstream").toLowerCase();
+const OWNER_NAME = String(args.get("name") ?? (OWNER_HANDLE === "hymnstream" ? "Life Stream" : OWNER_HANDLE));
+const OWNER_EMAIL = String(args.get("email") ?? `${OWNER_HANDLE}@lifestream.local`).toLowerCase();
 const STORAGE_MODE = process.env.STORAGE_MODE === "r2" ? "r2" : "local";
 const LOCAL_STORAGE = path.join(process.cwd(), ".storage");
 const CACHE_FILE = path.join(DIR, ".artwork-hashes.json");
@@ -111,33 +118,50 @@ const urlHashCache = existsSync(CACHE_FILE)
   ? JSON.parse(await readFile(CACHE_FILE, "utf8"))
   : {};
 
-/**
- * Fetch artwork for a track URL, store it content-keyed, return the hash.
- * In dry-run mode nothing is written to storage.
- */
-async function artworkHashFor(url) {
-  if (!url) return null;
-  if (url in urlHashCache) return urlHashCache[url];
+function artworkStored(key) {
+  return STORAGE_MODE === "local" ? existsSync(path.join(LOCAL_STORAGE, key)) : false;
+}
 
-  const candidates = [url.replace(/-original\./, "-t500x500."), url];
-  for (const u of candidates) {
+/** Fetch artwork bytes for a track URL (t500x500 first, then original). */
+async function fetchArtwork(url) {
+  for (const u of [url.replace(/-original\./, "-t500x500."), url]) {
     try {
       const r = await fetch(u);
       if (!r.ok) continue;
       const buf = Buffer.from(await r.arrayBuffer());
       if (buf.byteLength < 1000) continue;
-      const h = createHash("sha1").update(buf).digest("hex").slice(0, 12);
-      const key = `img/sc-${h}.jpg`;
-      if (!DRY) {
-        const already =
-          STORAGE_MODE === "local" ? existsSync(path.join(LOCAL_STORAGE, key)) : false;
-        if (!already) await putStorage(key, buf, "image/jpeg");
-      }
-      urlHashCache[url] = h;
-      return h;
+      return buf;
     } catch {
       /* try next candidate */
     }
+  }
+  return null;
+}
+
+/**
+ * Content hash for a track's artwork, storing the image content-keyed.
+ * Cache hits re-check storage: a --dry run fills the cache WITHOUT storing
+ * images, so the first real run must heal those entries.
+ */
+async function artworkHashFor(url) {
+  if (!url) return null;
+  const keyFor = (h) => `img/sc-${h}.jpg`;
+
+  if (url in urlHashCache) {
+    const h = urlHashCache[url];
+    if (h && !DRY && !artworkStored(keyFor(h))) {
+      const buf = await fetchArtwork(url);
+      if (buf) await putStorage(keyFor(h), buf, "image/jpeg");
+    }
+    return h;
+  }
+
+  const buf = await fetchArtwork(url);
+  if (buf) {
+    const h = createHash("sha1").update(buf).digest("hex").slice(0, 12);
+    if (!DRY && !artworkStored(keyFor(h))) await putStorage(keyFor(h), buf, "image/jpeg");
+    urlHashCache[url] = h;
+    return h;
   }
   urlHashCache[url] = null;
   return null;
@@ -199,8 +223,12 @@ for (const t of tracks) {
   }
 }
 
-const albumGroups = [...groups.entries()].filter(([, list]) => list.length >= 2);
-const singletons = [...groups.values()].filter((list) => list.length === 1).flat().concat(ungrouped);
+const albumGroups = SINGLES
+  ? []
+  : [...groups.entries()].filter(([, list]) => list.length >= 2);
+const singletons = SINGLES
+  ? tracks
+  : [...groups.values()].filter((list) => list.length === 1).flat().concat(ungrouped);
 
 // ---------- dry run ----------
 
