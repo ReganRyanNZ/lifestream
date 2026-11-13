@@ -73,22 +73,6 @@ const baseTrackQuery = () =>
     .innerJoin(users, eq(tracks.userId, users.id))
     .leftJoin(albums, eq(tracks.albumId, albums.id));
 
-export async function getRecentTracks(limit = 24): Promise<TrackDTO[]> {
-  const rows = await baseTrackQuery()
-    .where(eq(tracks.isPublished, true))
-    .orderBy(desc(tracks.createdAt))
-    .limit(limit);
-  return rows.map((r) => toDTO(r));
-}
-
-export async function getTopTracks(limit = 10): Promise<TrackDTO[]> {
-  const rows = await baseTrackQuery()
-    .where(eq(tracks.isPublished, true))
-    .orderBy(desc(tracks.playCount), desc(tracks.likeCount))
-    .limit(limit);
-  return rows.map((r) => toDTO(r));
-}
-
 /**
  * "Popular" = plays counted in the last 30 days (rolling, so newly uploaded
  * songs can chart). To keep the section from being a static top-10, we draw a
@@ -140,16 +124,19 @@ export async function getRecentlyPlayed(
   clientUuid: string,
   limit = 12,
 ): Promise<TrackDTO[]> {
-  const conds = [eq(playEvents.clientUuid, clientUuid), gte(playEvents.secondsPlayed, 5)];
-  if (userId) conds.push(eq(playEvents.userId, userId));
+  // events from this device OR this account (pre-login device history carries
+  // over), but only real listening (>= 5s)
+  const scope = userId
+    ? or(eq(playEvents.clientUuid, clientUuid), eq(playEvents.userId, userId))
+    : eq(playEvents.clientUuid, clientUuid);
   const rows = await db
-    .select({ id: playEvents.trackId, last: sql<string>`max(${playEvents.playedAt})` })
+    .select({ id: playEvents.trackId })
     .from(playEvents)
-    .where(or(...conds))
+    .where(and(scope, gte(playEvents.secondsPlayed, 5)))
     .groupBy(playEvents.trackId)
     .orderBy(desc(sql`max(${playEvents.playedAt})`))
     .limit(limit);
-  return getTracksByIdsOrdered(rows.map((r) => r.id));
+  return getTracksByIdsOrdered(rows.map((r) => r.id), userId);
 }
 
 export async function getTrackById(id: string, userId?: string): Promise<TrackDTO | null> {
@@ -174,7 +161,7 @@ export async function getTracksByIdsOrdered(
   if (ids.length === 0) return [];
   const rows = await baseTrackQuery().where(inArray(tracks.id, ids));
   let likedIds: Set<string> = new Set();
-  if (userId && ids.length > 0) {
+  if (userId) {
     const l = await db
       .select({ trackId: likes.trackId })
       .from(likes)
@@ -438,16 +425,4 @@ export async function getPlaylistTracks(playlistId: string): Promise<TrackDTO[]>
     .where(and(eq(playlistTracks.playlistId, playlistId), eq(tracks.isPublished, true)))
     .orderBy(playlistTracks.position);
   return rows.map((r) => toDTO(r));
-}
-
-export async function siteStats() {
-  const rows = await db
-    .select({
-      trackCount: sql<number>`count(*)::int`,
-      artistCount: sql<number>`count(distinct ${tracks.userId})::int`,
-      totalSeconds: sql<number>`coalesce(sum(${tracks.durationSec}), 0)::float`,
-    })
-    .from(tracks)
-    .where(eq(tracks.isPublished, true));
-  return rows[0] ?? { trackCount: 0, artistCount: 0, totalSeconds: 0 };
 }

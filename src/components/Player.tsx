@@ -8,6 +8,7 @@ import {
   drainAccumulator,
   getClientUuid,
   observeTime,
+  probeAuthed,
   startAccumulating,
   usePlayer,
 } from "@/components/player-store";
@@ -15,6 +16,7 @@ import { Cover } from "@/components/Cover";
 import { LikeButton } from "@/components/LikeButton";
 import { SeekSlider } from "@/components/SeekSlider";
 import { TrackMenu } from "@/components/TrackMenu";
+import { PauseIcon, PlayIcon } from "@/components/icons";
 
 function sendBeacon(trackId: string | null, seconds: number) {
   if (!trackId || seconds < 5) return;
@@ -38,8 +40,6 @@ function sendBeacon(trackId: string | null, seconds: number) {
 export function Player() {
   const track = usePlayer((s) => s.queue[s.index]);
   const playing = usePlayer((s) => s.playing);
-  const position = usePlayer((s) => s.position);
-  const duration = usePlayer((s) => s.duration);
   const queueLength = usePlayer((s) => s.queue.length);
   const nowPlayingOpen = usePlayer((s) => s.nowPlayingOpen);
   const setNowPlaying = usePlayer((s) => s.setNowPlaying);
@@ -47,13 +47,10 @@ export function Player() {
   const next = usePlayer((s) => s.next);
   const prev = usePlayer((s) => s.prev);
 
-  // auth probe for the like button (cached promise — one fetch per page load)
+  // auth probe for the like button (cached — one /api/me per page load)
   const [authed, setAuthed] = useState(false);
   useEffect(() => {
-    fetch("/api/me")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: { authed?: boolean } | null) => setAuthed(!!j?.authed))
-      .catch(() => {});
+    probeAuthed().then(setAuthed);
   }, []);
 
   // bind audio events + accumulated-seconds observer, once
@@ -139,29 +136,38 @@ export function Player() {
     });
   }, [track]);
 
-  // keep lock-screen scrubber in sync (throttled to every ~5s)
+  // keep lock-screen scrubber in sync — polled every 5s rather than per
+  // timeupdate (positionState is advisory; per-tick updates just churn)
   useEffect(() => {
     const ms = navigator.mediaSession;
-    if (!ms || !duration || !Number.isFinite(duration)) return;
-    try {
-      ms.setPositionState({
-        duration,
-        playbackRate: 1,
-        position: Math.min(position, duration),
-      });
-    } catch {
-      /* ignore */
-    }
-  }, [Math.floor(position / 5), duration]);
+    if (!ms) return;
+    const update = () => {
+      const { position, duration } = usePlayer.getState();
+      if (!duration || !Number.isFinite(duration)) return;
+      try {
+        ms.setPositionState({
+          duration,
+          playbackRate: 1,
+          position: Math.min(position, duration),
+        });
+      } catch {
+        /* ignore */
+      }
+    };
+    update();
+    const id = setInterval(update, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   // preload the next track into the service-worker playback cache (also what
   // lets background "next track" work on iOS). Re-run when the queue extends
   // (e.g. a station queue arriving right after the seed starts).
+  const trackId = track?.id;
   useEffect(() => {
-    if (!track) return;
+    if (!trackId) return;
     const nxt = usePlayer.getState().queue[usePlayer.getState().index + 1];
     if (nxt) fetch(nxt.audioUrl).catch(() => {});
-  }, [track?.id, queueLength]);
+  }, [trackId, queueLength]);
 
   // hidden while the full-screen Now Playing view is open (it covers the app)
   if (!track || nowPlayingOpen) return null;
@@ -210,7 +216,7 @@ export function Player() {
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          <TrackMenu track={track} />
+          <TrackMenu key={track.id} track={track} />
 
           <button onClick={prev} aria-label="Previous track" className="btn-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -222,15 +228,7 @@ export function Player() {
             aria-label={playing ? "Pause" : "Play"}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-[#06121c] transition hover:brightness-110"
           >
-            {playing ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
-              </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M7 4l13 8-13 8z" />
-              </svg>
-            )}
+            {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
           </button>
           <button onClick={next} aria-label="Next track" className="btn-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>

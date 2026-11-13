@@ -88,3 +88,9 @@ export const VERSES: { ref: string; text: string }[] = [
     text: "Sing a new song to Jehovah; sing His praise from the end of the earth;",
   },
 ];
+
+/** A random verse for the home header. Called from a server component (the
+ *  home page is force-dynamic), so it rotates per request. */
+export function randomVerse() {
+  return VERSES[Math.floor(Math.random() * VERSES.length)];
+}

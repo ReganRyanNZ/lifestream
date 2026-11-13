@@ -49,7 +49,6 @@ for (const f of (await readdir(dir)).filter((f) => f.endsWith(".info.json"))) {
 }
 
 let renamed = 0,
-  mergedInto = 0,
   deletedAlbums = 0,
   renumbered = 0;
 
@@ -77,7 +76,6 @@ for (const g of groups) {
   const siblings = rows.filter((r) => r.id !== canonical.id);
   if (siblings.length > 0) {
     await sql`update tracks set album_id = ${canonical.id} where album_id in ${sql(siblings.map((r) => r.id))}`;
-    mergedInto += siblings.length;
     await sql`delete from albums where id in ${sql(siblings.map((r) => r.id))}`;
     deletedAlbums += siblings.length;
   }

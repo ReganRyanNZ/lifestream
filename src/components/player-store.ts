@@ -201,6 +201,24 @@ export function bindAudio() {
   );
 }
 
+// ---------- auth probe (shared, cached for the page lifetime) ----------
+
+let authedProbe: Promise<boolean> | null = null;
+
+/**
+ * One /api/me probe per page load, shared by the mini bar and the Now Playing
+ * overlay (login/logout always triggers a navigation, so no live refresh).
+ */
+export function probeAuthed(): Promise<boolean> {
+  if (!authedProbe) {
+    authedProbe = fetch("/api/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { authed?: boolean } | null) => !!j?.authed)
+      .catch(() => false);
+  }
+  return authedProbe;
+}
+
 // ---------- play-count beacon accounting ----------
 
 export function getClientUuid(): string {

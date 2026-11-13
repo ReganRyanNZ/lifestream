@@ -29,12 +29,12 @@ export function TrackMenu({
     setTimeout(() => setNotice((n) => (n === msg ? null : n)), 2600);
   };
 
+  // mute state for this track (the component is keyed by track.id at its
+  // usage sites, so state resets naturally when the song changes)
   useEffect(() => {
-    setMuteState({ songMuted: false, albumMuted: false });
-    setShowPlaylists(false);
     fetch(`/api/preferences?client=${encodeURIComponent(getClientUuid())}&trackId=${track.id}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
+      .then((j: { songMuted?: boolean; albumMuted?: boolean } | null) => {
         if (j) setMuteState({ songMuted: !!j.songMuted, albumMuted: !!j.albumMuted });
       })
       .catch(() => {});
@@ -158,8 +158,8 @@ export function TrackMenu({
             )}
 
             <button
-              role="menuitem"
-              aria-pressed={muteState.songMuted}
+              role="menuitemcheckbox"
+              aria-checked={muteState.songMuted}
               onClick={() => toggleMute(muteState.songMuted ? "unmute" : "mute")}
               className="rounded-md px-2.5 py-2 text-left hover:bg-surface-2"
             >
@@ -173,8 +173,8 @@ export function TrackMenu({
             </button>
             {track.albumId && (
               <button
-                role="menuitem"
-                aria-pressed={muteState.albumMuted}
+                role="menuitemcheckbox"
+                aria-checked={muteState.albumMuted}
                 onClick={() => toggleMute(muteState.albumMuted ? "unmute-album" : "mute-album")}
                 className="rounded-md px-2.5 py-2 text-left hover:bg-surface-2"
               >

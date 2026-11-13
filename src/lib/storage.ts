@@ -33,7 +33,7 @@ export async function putObject(
     return;
   }
 
-  const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
+  const { PutObjectCommand } = await import("@aws-sdk/client-s3");
   const client = await getR2Client();
   await client.send(
     new PutObjectCommand({
@@ -55,7 +55,7 @@ export async function objectExists(key: string): Promise<boolean> {
       return false;
     }
   }
-  const { S3Client, HeadObjectCommand } = await import("@aws-sdk/client-s3");
+  const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
   try {
     await (await getR2Client()).send(
       new HeadObjectCommand({ Bucket: process.env.R2_BUCKET!, Key: key }),

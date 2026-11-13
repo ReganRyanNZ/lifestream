@@ -3,161 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { usePlayer } from "@/components/player-store";
+import { probeAuthed, usePlayer } from "@/components/player-store";
 import { Cover } from "@/components/Cover";
 import { LikeButton } from "@/components/LikeButton";
 import { SeekSlider } from "@/components/SeekSlider";
 import { TrackMenu } from "@/components/TrackMenu";
-import { CONTEXT_LABEL } from "@/components/UpNext";
-import { fmtDuration } from "@/lib/format";
-import type { TrackDTO } from "@/lib/types";
-
-const MAX_ROWS = 50;
-
-/** One queue row: number → play on hover; the current song toggles pause. */
-function Row({
-  track,
-  queueIndex,
-  displayNo,
-  current = false,
-}: {
-  track: TrackDTO;
-  /** absolute index in the player queue (what clicking plays) */
-  queueIndex: number;
-  /** 1-based position shown to the user */
-  displayNo?: number;
-  current?: boolean;
-}) {
-  const playing = usePlayer((s) => s.playing);
-  const isPlaying = current && playing;
-
-  return (
-    <li
-      className={`group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface-2 ${
-        current ? "bg-surface-2" : ""
-      }`}
-    >
-      <button
-        onClick={() => {
-          const s = usePlayer.getState();
-          if (current) s.toggle();
-          else s.playQueue(s.queue, queueIndex, s.contextKind ?? "list");
-        }}
-        aria-label={isPlaying ? `Pause ${track.title}` : `Play ${track.title}`}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/80 transition hover:bg-accent hover:text-[#06121c]"
-      >
-        {isPlaying ? (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
-          </svg>
-        ) : (
-          <>
-            {current || displayNo == null ? null : (
-              <span className="text-xs tabular-nums text-muted group-hover:hidden">{displayNo}</span>
-            )}
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden
-              className={current ? "" : "hidden group-hover:block"}
-            >
-              <path d="M7 4l13 8-13 8z" />
-            </svg>
-          </>
-        )}
-      </button>
-      <Link
-        href={`/track/${track.id}`}
-        className={`min-w-0 flex-1 truncate text-sm hover:underline ${
-          current ? "font-semibold text-accent" : ""
-        }`}
-      >
-        {track.title}
-      </Link>
-      <span className="hidden max-w-40 shrink-0 truncate text-xs text-muted sm:inline">
-        {track.artist}
-      </span>
-      <span className="w-11 shrink-0 text-right text-xs tabular-nums text-muted">
-        {fmtDuration(track.durationSec)}
-      </span>
-    </li>
-  );
-}
-
-/** The live queue: current song + up next, with radio-mix / album switching. */
-function QueuePanel() {
-  const queue = usePlayer((s) => s.queue);
-  const index = usePlayer((s) => s.index);
-  const contextKind = usePlayer((s) => s.contextKind);
-  const [albumBusy, setAlbumBusy] = useState(false);
-
-  const current = queue[index];
-  if (!current) return null;
-
-  const upcoming = queue.slice(index + 1, index + 1 + MAX_ROWS);
-  const more = queue.length - (index + 1 + upcoming.length);
-
-  async function playAlbumInOrder() {
-    if (!current.albumId || albumBusy) return;
-    setAlbumBusy(true);
-    try {
-      const r = await fetch(`/api/albums/${current.albumId}/tracks`);
-      if (r.ok) {
-        const j = (await r.json()) as { tracks?: TrackDTO[] };
-        // switchToQueue keeps the current song playing if it's in the album
-        if (j.tracks?.length) usePlayer.getState().switchToQueue(j.tracks, "album");
-      }
-    } catch {
-      /* offline — ignore */
-    } finally {
-      setAlbumBusy(false);
-    }
-  }
-
-  return (
-    <section>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <h2 className="section-title !mb-0">Up next</h2>
-        <span className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted">
-          {CONTEXT_LABEL[contextKind ?? "list"]}
-        </span>
-        <span className="ml-auto flex gap-2">
-          {contextKind !== "station" && (
-            <button
-              className="btn btn-ghost !px-3 !py-1.5"
-              onClick={() => usePlayer.getState().regenerateStation()}
-            >
-              Radio mix
-            </button>
-          )}
-          {current.albumId && contextKind !== "album" && (
-            <button
-              className="btn btn-ghost !px-3 !py-1.5"
-              onClick={playAlbumInOrder}
-              disabled={albumBusy}
-            >
-              {albumBusy ? "Loading…" : "Album in order"}
-            </button>
-          )}
-        </span>
-      </div>
-      <ol className="flex flex-col gap-0.5">
-        <Row track={current} queueIndex={index} current />
-        {upcoming.map((t, k) => (
-          <Row key={`${t.id}-${k}`} track={t} queueIndex={index + 1 + k} displayNo={k + 1} />
-        ))}
-      </ol>
-      {upcoming.length === 0 && (
-        <p className="px-2 py-4 text-sm text-muted">
-          End of queue — switch to the radio mix to keep the music going.
-        </p>
-      )}
-      {more > 0 && <p className="px-2 pt-2 text-xs text-muted">+{more} more in the queue</p>}
-    </section>
-  );
-}
+import { QueuePanel } from "@/components/Queue";
+import { PauseIcon, PlayIcon } from "@/components/icons";
 
 function TransportControls({ authed }: { authed: boolean }) {
   const playing = usePlayer((s) => s.playing);
@@ -169,7 +21,7 @@ function TransportControls({ authed }: { authed: boolean }) {
 
   return (
     <div className="flex items-center justify-center gap-3 sm:gap-5">
-      <TrackMenu track={track} direction="down" />
+      <TrackMenu key={track.id} track={track} direction="down" />
 
       <button onClick={prev} aria-label="Previous track" className="btn-icon !h-10 !w-10">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -181,15 +33,7 @@ function TransportControls({ authed }: { authed: boolean }) {
         aria-label={playing ? "Pause" : "Play"}
         className="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-[#06121c] transition hover:brightness-110"
       >
-        {playing ? (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
-          </svg>
-        ) : (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M7 4l13 8-13 8z" />
-          </svg>
-        )}
+        {playing ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
       </button>
       <button onClick={next} aria-label="Next track" className="btn-icon !h-10 !w-10">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -251,20 +95,10 @@ export function NowPlaying() {
     };
   }, [open]);
 
-  // auth probe for the like button, refreshed each time the view opens
+  // auth probe for the like button (cached — one /api/me per page load)
   useEffect(() => {
-    if (!open) return;
-    let alive = true;
-    fetch("/api/me")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: { authed?: boolean } | null) => {
-        if (alive) setAuthed(!!j?.authed);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [open]);
+    probeAuthed().then(setAuthed);
+  }, []);
 
   if (!track) return null;
 

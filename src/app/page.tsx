@@ -5,7 +5,7 @@ import { AlbumTileRow } from "@/components/AlbumTileRow";
 import { ShuffleButton } from "@/components/PlayButtons";
 import { getCurrentUser } from "@/lib/auth";
 import { getPlaylistsFor, getPopularTracks, getRandomAlbums } from "@/lib/queries";
-import { VERSES } from "@/lib/verses";
+import { randomVerse } from "@/lib/verses";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,7 @@ export default async function HomePage() {
   ]);
   const playlists = allPlaylists.filter((p) => p.count > 0);
 
-  const verse = VERSES[Math.floor(Math.random() * VERSES.length)];
+  const verse = randomVerse();
 
   return (
     <div className="flex flex-col gap-10">

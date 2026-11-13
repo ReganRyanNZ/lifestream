@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { getRecentlyPlayed, getTracksByIdsOrdered } from "@/lib/queries";
+import { getRecentlyPlayed } from "@/lib/queries";
 
 /** Recently-played for this listener — device clientUuid and/or signed-in account. */
 export async function GET(req: NextRequest) {
@@ -10,6 +10,5 @@ export async function GET(req: NextRequest) {
   }
   const user = await getCurrentUser().catch(() => null);
   const tracks = await getRecentlyPlayed(user?.id ?? null, clientUuid, 12);
-  const annotated = await getTracksByIdsOrdered(tracks.map((t) => t.id), user?.id ?? null);
-  return NextResponse.json({ tracks: annotated });
+  return NextResponse.json({ tracks });
 }

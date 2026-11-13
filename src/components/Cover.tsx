@@ -14,12 +14,15 @@ export function Cover({
   rounded?: string;
 }) {
   if (artworkUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
+    // Artwork is content-addressed and already sized (~500px) — next/image
+    // optimization would add cost without benefit here.
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={artworkUrl}
         alt=""
         loading="lazy"
+        decoding="async"
         className={`aspect-square w-full object-cover ${rounded} ${className}`}
       />
     );

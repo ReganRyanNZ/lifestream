@@ -18,8 +18,19 @@ export function SettingsClient() {
     if (navigator.storage?.persisted) setPersisted(await navigator.storage.persisted());
   }
 
+  // storage estimate arrives async (setState in a callback, not synchronously
+  // in the effect, to avoid cascading renders)
   useEffect(() => {
-    refresh();
+    navigator.storage
+      ?.estimate?.()
+      .then((est) => {
+        if (est) setUsage({ usage: est.usage ?? 0, quota: est.quota ?? 0 });
+      })
+      .catch(() => {});
+    navigator.storage
+      ?.persisted?.()
+      .then((p) => setPersisted(p))
+      .catch(() => {});
   }, []);
 
   async function requestPersist() {
@@ -80,9 +91,9 @@ export function SettingsClient() {
       <section className="card p-4">
         <h2 className="mb-2 font-semibold">Install for offline listening</h2>
         <p className="text-sm text-muted">
-          <strong>Android/desktop:</strong> use your browser's "Install app" / "Add to Home
-          screen" option. <strong>iPhone/iPad:</strong> Safari → Share → “Add to Home
-          Screen”. Installing also protects your cached music from the browser's periodic
+          <strong>Android/desktop:</strong> use your browser’s “Install app” / “Add to Home
+          screen” option. <strong>iPhone/iPad:</strong> Safari → Share → “Add to Home
+          Screen”. Installing also protects your cached music from the browser’s periodic
           storage cleanup (especially important on iOS).
         </p>
       </section>

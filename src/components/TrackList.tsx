@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePlayer } from "@/components/player-store";
 import { LikeButton } from "@/components/LikeButton";
+import { PauseIcon, PlayIcon } from "@/components/icons";
 import { fmtDuration, fmtPlays } from "@/lib/format";
 import type { TrackDTO } from "@/lib/types";
 
@@ -58,15 +59,7 @@ export function TrackList({
               aria-label={isPlaying ? `Pause ${t.title}` : `Play ${t.title}`}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/80 transition hover:bg-accent hover:text-[#06121c]"
             >
-              {isPlaying ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M7 4l13 8-13 8z" />
-                </svg>
-              )}
+              {isPlaying ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
             </button>
 
             {numbered && (

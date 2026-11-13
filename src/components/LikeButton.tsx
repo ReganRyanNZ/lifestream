@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toggleLike } from "@/app/actions";
 import { recordPreference } from "@/components/player-store";
 
@@ -17,10 +18,11 @@ export function LikeButton({
 }) {
   const [liked, setLiked] = useState(initialLiked);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function onClick() {
     if (!authed) {
-      window.location.href = "/login";
+      router.push("/login");
       return;
     }
     if (pending) return;
