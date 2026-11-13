@@ -22,9 +22,13 @@
  *   node scripts/import-soundcloud.mjs --titles=album-titles.json
  *   node scripts/import-soundcloud.mjs --dir=imports/mirror318 --singles \
  *     --handle=mirror318 --name="Mirror318"
+ *   node scripts/import-soundcloud.mjs --dir=imports/zm_songs \
+ *     --flat=c7ace116f4f6 --handle=zm --name="ZM"
  *
  * --singles: skip album grouping entirely (for accounts that release each
  * song with its own artwork — every track keeps its artwork, no albums).
+ * --flat=h1,h2: treat these artwork groups as singles too — for accounts
+ * where most tracks share one default cover that isn't a real album.
  *
  * Idempotent: tracks keyed on source_sc_id; artwork hashes cached per import
  * dir in `.artwork-hashes.json`; yt-dlp side is resumable (archive file).
@@ -71,6 +75,12 @@ let albumTitles = {};
 if (args.has("titles")) {
   albumTitles = JSON.parse(await readFile(String(args.get("titles")), "utf8"));
 }
+
+// explicit album membership: { "Title": ["scid", ...] } — for SoundCloud albums
+// whose tracks don't share artwork (artwork grouping misses them)
+const explicitSets = args.has("sets")
+  ? JSON.parse(await readFile(String(args.get("sets")), "utf8"))
+  : {};
 
 // ---------- storage helpers ----------
 
@@ -223,12 +233,49 @@ for (const t of tracks) {
   }
 }
 
+const FLAT = new Set(
+  String(args.get("flat") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+
+// tracks claimed by an explicit set are excluded from artwork grouping
+const claimed = new Map(); // scId -> { title, list }
+for (const [title, ids] of Object.entries(explicitSets)) {
+  const list = [];
+  for (const id of ids) {
+    const t = tracks.find((x) => x.scId === String(id));
+    if (t && !claimed.has(t.scId)) {
+      claimed.set(t.scId, title);
+      list.push(t);
+    }
+  }
+  if (list.length >= 2) explicitSets[title] = list;
+  else delete explicitSets[title];
+}
+
 const albumGroups = SINGLES
   ? []
-  : [...groups.entries()].filter(([, list]) => list.length >= 2);
+  : [...groups.entries()]
+      .filter(
+        ([h, list]) =>
+          list.length >= 2 &&
+          !FLAT.has(h) &&
+          list.filter((t) => !claimed.has(t.scId)).length >= 2,
+      )
+      .map(([h, list]) => [h, list.filter((t) => !claimed.has(t.scId))]);
 const singletons = SINGLES
-  ? tracks
-  : [...groups.values()].filter((list) => list.length === 1).flat().concat(ungrouped);
+  ? tracks.filter((t) => !claimed.has(t.scId))
+  : [...groups.entries()]
+      .filter(
+        ([h, list]) =>
+          list.length === 1 ||
+          FLAT.has(h) ||
+          list.filter((t) => !claimed.has(t.scId)).length < 2,
+      )
+      .flatMap(([, list]) => list.filter((t) => !claimed.has(t.scId)))
+      .concat(ungrouped.filter((t) => !claimed.has(t.scId)));
 
 // ---------- dry run ----------
 
@@ -287,6 +334,42 @@ let tracksImported = 0;
 let skipped = 0;
 
 console.log(`\nImporting (db has ${existing.size} of these already)…`);
+
+// explicit sets first: { title -> list }, album keyed on "set:<title>"
+for (const [title, list] of Object.entries(explicitSets)) {
+  if (!list.some((t) => !existing.has(t.scId))) continue;
+  const key = `set:${title}`;
+  let albumRow = await sql`select id from albums where source_artwork_id = ${key}`;
+  if (albumRow.length === 0) {
+    const h = list.map((t) => t.artworkHash).find(Boolean) ?? null;
+    albumRow = await sql`
+      insert into albums (user_id, title, artwork_key, source_artwork_id)
+      values (${ownerId}, ${title}, ${h ? `img/sc-${h}.jpg` : null}, ${key})
+      returning id`;
+    albumsCreated++;
+  }
+  const albumId = albumRow[0].id;
+
+  let trackNo = 1;
+  for (const t of list) {
+    if (existing.has(t.scId)) {
+      skipped++;
+      trackNo++;
+      continue;
+    }
+    const audioKey = `a/${randomUUID()}.${t.ext}`;
+    const s = await stat(t.audioPath);
+    await copyAudio(t.audioPath, audioKey);
+    await sql`
+      insert into tracks (user_id, album_id, track_no, title, audio_key, mime, ext,
+        size_bytes, duration_sec, source_sc_id)
+      values (${ownerId}, ${albumId}, ${trackNo}, ${t.title}, ${audioKey}, ${t.mime}, ${t.ext},
+        ${s.size}, ${t.durationSec}, ${t.scId})
+      on conflict (source_sc_id) do nothing`;
+    tracksImported++;
+    trackNo++;
+  }
+}
 
 for (const [h, list] of albumGroups) {
   // skip groups whose tracks are all imported already — after title merging,

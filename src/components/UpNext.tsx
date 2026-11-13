@@ -2,15 +2,15 @@
 
 import { usePlayer } from "@/components/player-store";
 import { QueuePanel, QueueRow } from "@/components/Queue";
-import { PlayIcon } from "@/components/icons";
+import { PlayAlbumButton } from "@/components/PlayButtons";
 import type { TrackDTO } from "@/lib/types";
 
 /**
  * "Up next" for a track page: when this song is the one playing, shows the
  * live queue (QueuePanel) with a switch between the radio mix (all songs,
  * popularity weighted) and this song's album in order — swapping only what
- * comes after the current song. When it isn't playing, shows the album (or an
- * explanation) instead.
+ * comes after the current song. When it isn't playing: its album if it has
+ * one, else the live queue if anything else is playing, else nothing.
  */
 export function UpNext({
   track,
@@ -21,29 +21,36 @@ export function UpNext({
 }) {
   const queue = usePlayer((s) => s.queue);
   const index = usePlayer((s) => s.index);
-  const playingThis = queue.length > 0 && queue[index]?.id === track.id;
+  const current = queue[index];
+  const playingThis = current?.id === track.id;
 
   if (playingThis) {
     return <QueuePanel albumTracks={albumTracks} />;
   }
 
-  // this song isn't the one playing: show its album, or explain the station flow
+  // this song isn't the one playing: show its album, or the live queue
   if (albumTracks && albumTracks.length > 0) {
     const pos = Math.max(
       0,
       albumTracks.findIndex((t) => t.id === track.id),
     );
+    // any entry point plays the full album starting from that track (wrapping)
+    const playFrom = (i: number) =>
+      usePlayer.getState().playQueue(
+        [...albumTracks.slice(i), ...albumTracks.slice(0, i)],
+        0,
+        "album",
+      );
     return (
       <section>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <h2 className="section-title !mb-0">Up next · album</h2>
-          <button
+          <PlayAlbumButton
+            tracks={albumTracks}
+            fromId={track.id}
+            label="Play album from here"
             className="btn btn-primary ml-auto !px-3 !py-1.5"
-            onClick={() => usePlayer.getState().playQueue(albumTracks, pos, "album")}
-          >
-            <PlayIcon size={14} />
-            Play album from here
-          </button>
+          />
         </div>
         <ol className="flex flex-col gap-0.5">
           {albumTracks.map((t, i) => (
@@ -51,7 +58,7 @@ export function UpNext({
               key={t.id}
               track={t}
               numbered={(i - pos + albumTracks.length) % albumTracks.length + 1}
-              onPlay={() => usePlayer.getState().playQueue(albumTracks, i, "album")}
+              onPlay={() => playFrom(i)}
             />
           ))}
         </ol>
@@ -59,11 +66,9 @@ export function UpNext({
     );
   }
 
-  return (
-    <section className="card max-w-xl p-4 text-sm text-muted">
-      Press play and this song will be followed by a <strong className="text-foreground">radio
-      mix of all songs</strong> — weighted toward the most-played and most-liked, so the good
-      ones keep coming.
-    </section>
-  );
+  // nothing queued for this song: if something else is playing, the live queue
+  // is still the real "up next"; otherwise leave the space empty
+  if (current) return <QueuePanel />;
+
+  return null;
 }

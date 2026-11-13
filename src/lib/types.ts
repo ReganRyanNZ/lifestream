@@ -11,6 +11,7 @@ export type TrackDTO = {
   durationSec: number;
   playCount: number;
   likeCount: number;
+  isInstrumental?: boolean;
   liked?: boolean;
   albumId: string | null;
   trackNo: number | null;

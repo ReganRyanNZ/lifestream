@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { usePlayer, type PlayContextKind } from "@/components/player-store";
 import { PauseIcon, PlayIcon } from "@/components/icons";
 import { fmtDuration } from "@/lib/format";
@@ -18,7 +17,7 @@ export const CONTEXT_LABEL: Record<PlayContextKind, string> = {
 /** Rows shown for the live queue (current song + up next) before "+N more". */
 const MAX_ROWS = 50;
 
-/** One queue row: a number that becomes ▶ on hover; the current song toggles. */
+/** One queue row: the whole row plays (the current song toggles pause). */
 export function QueueRow({
   track,
   onPlay,
@@ -36,41 +35,42 @@ export function QueueRow({
   const isPlaying = current && playing;
 
   return (
-    <li
-      className={`group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface-2 ${
-        current ? "bg-surface-2" : ""
-      }`}
-    >
+    <li>
       <button
         onClick={onPlay}
         aria-label={isPlaying ? `Pause ${track.title}` : `Play ${track.title}`}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/80 transition hover:bg-accent hover:text-[#06121c]"
-      >
-        {isPlaying ? (
-          <PauseIcon size={14} />
-        ) : (
-          <>
-            {numbered != null && (
-              <span className="text-xs tabular-nums text-muted group-hover:hidden">{numbered}</span>
-            )}
-            <PlayIcon size={14} className={numbered != null ? "hidden group-hover:block" : ""} />
-          </>
-        )}
-      </button>
-      <Link
-        href={`/track/${track.id}`}
-        className={`min-w-0 flex-1 truncate text-sm hover:underline ${
-          current ? "font-semibold text-accent" : ""
+        className={`group flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-surface-2 ${
+          current ? "bg-surface-2" : ""
         }`}
       >
-        {track.title}
-      </Link>
-      <span className="hidden max-w-40 shrink-0 truncate text-xs text-muted sm:inline">
-        {track.artist}
-      </span>
-      <span className="w-11 shrink-0 text-right text-xs tabular-nums text-muted">
-        {fmtDuration(track.durationSec)}
-      </span>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/80 transition group-hover:bg-accent group-hover:text-[#06121c]">
+          {isPlaying ? (
+            <PauseIcon size={14} />
+          ) : (
+            <>
+              {numbered != null && (
+                <span className="text-xs tabular-nums text-muted group-hover:hidden">
+                  {numbered}
+                </span>
+              )}
+              <PlayIcon size={14} className={numbered != null ? "hidden group-hover:block" : ""} />
+            </>
+          )}
+        </span>
+        <span
+          className={`min-w-0 flex-1 truncate text-sm ${
+            current ? "font-semibold text-accent" : ""
+          }`}
+        >
+          {track.title}
+        </span>
+        <span className="hidden max-w-40 shrink-0 truncate text-xs text-muted sm:inline">
+          {track.artist}
+        </span>
+        <span className="w-11 shrink-0 text-right text-xs tabular-nums text-muted">
+          {fmtDuration(track.durationSec)}
+        </span>
+      </button>
     </li>
   );
 }

@@ -59,7 +59,12 @@ export default async function HomePage() {
 
       {popular.length > 0 && (
         <section>
-          <h2 className="section-title">Popular songs</h2>
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <h2 className="section-title !mb-0">Popular songs</h2>
+            <Link href="/songs" className="text-sm text-muted hover:text-foreground">
+              All songs
+            </Link>
+          </div>
           <TrackTileGrid tracks={popular} layout="row" />
           <p className="pt-1 text-xs text-muted">
             A rotating pick from the most-played songs over the last 30 days.
@@ -69,7 +74,12 @@ export default async function HomePage() {
 
       {albums.length > 0 && (
         <section>
-          <h2 className="section-title">Albums</h2>
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <h2 className="section-title !mb-0">Albums</h2>
+            <Link href="/albums" className="text-sm text-muted hover:text-foreground">
+              See all
+            </Link>
+          </div>
           <AlbumTileRow albums={albums} />
         </section>
       )}

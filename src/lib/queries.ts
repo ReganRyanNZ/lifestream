@@ -25,6 +25,7 @@ const trackSelection = {
   durationSec: tracks.durationSec,
   playCount: tracks.playCount,
   likeCount: tracks.likeCount,
+  isInstrumental: tracks.isInstrumental,
   createdAt: tracks.createdAt,
   artist: sql<string>`coalesce(${users.artistName}, ${users.displayName})`,
   handle: users.handle,
@@ -42,6 +43,7 @@ type TrackRow = {
   durationSec: number;
   playCount: number;
   likeCount: number;
+  isInstrumental: boolean;
   createdAt: Date;
   artist: string;
   handle: string;
@@ -60,6 +62,7 @@ function toDTO(r: TrackRow, liked = false): TrackDTO {
     durationSec: r.durationSec,
     playCount: r.playCount,
     likeCount: r.likeCount,
+    isInstrumental: r.isInstrumental,
     liked,
     albumId: r.albumId,
     trackNo: r.trackNo,
@@ -221,6 +224,62 @@ export async function getRandomAlbums(limit = 12) {
     .where(sql`exists (select 1 from tracks t where t.album_id = ${albums.id} and t.is_published)`)
     .orderBy(sql`random()`)
     .limit(limit);
+  return rows.map((a) => ({
+    ...a,
+    artworkUrl: a.artworkKey ? publicUrlFor(a.artworkKey) : null,
+  }));
+}
+
+/** Every published track for the /songs browse page, ordered by account
+ *  name, then album (singles first), then position within the album. */
+export async function getAllTracks(): Promise<TrackDTO[]> {
+  const rows = await baseTrackQuery()
+    .where(eq(tracks.isPublished, true))
+    .orderBy(
+      sql`coalesce(${users.artistName}, ${users.displayName}) asc`,
+      sql`${albums.title} asc nulls first`,
+      sql`${tracks.trackNo} asc nulls last`,
+      tracks.createdAt,
+    );
+  return rows.map((r) => toDTO(r));
+}
+
+export type AlbumWithArtist = {
+  id: string;
+  title: string;
+  artworkUrl: string | null;
+  color: string | null;
+  trackCount: number;
+  /** per-album credit, falling back to the account name */
+  artist: string;
+  /** the owning account's name (what the section header shows) */
+  userArtist: string;
+  handle: string;
+};
+
+/** Every album that has at least one published track, artist attached,
+ *  ordered for the /albums browse page (account name, then oldest first). */
+export async function getAllAlbums(): Promise<AlbumWithArtist[]> {
+  const rows = await db
+    .select({
+      id: albums.id,
+      title: albums.title,
+      artworkKey: albums.artworkKey,
+      color: albums.color,
+      trackCount: sql<number>`count(${tracks.id})::int`,
+      artist: sql<string>`coalesce(${albums.artistName}, ${users.artistName}, ${users.displayName})`,
+      userArtist: sql<string>`coalesce(${users.artistName}, ${users.displayName})`,
+      handle: users.handle,
+    })
+    .from(albums)
+    .innerJoin(users, eq(albums.userId, users.id))
+    .leftJoin(tracks, eq(tracks.albumId, albums.id))
+    .where(sql`exists (select 1 from tracks t where t.album_id = ${albums.id} and t.is_published)`)
+    .groupBy(albums.id, users.id)
+    .orderBy(
+      sql`coalesce(${users.artistName}, ${users.displayName}) asc`,
+      albums.createdAt,
+    );
   return rows.map((a) => ({
     ...a,
     artworkUrl: a.artworkKey ? publicUrlFor(a.artworkKey) : null,

@@ -95,11 +95,14 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   switchToQueue: (tracks, kind) => {
-    const cur = usePlayer.getState().queue[usePlayer.getState().index];
+    const s = usePlayer.getState();
+    const cur = s.queue[s.index];
     const pos = cur ? tracks.findIndex((t) => t.id === cur.id) : -1;
     if (pos >= 0) {
-      // keep the current song playing; only what comes after it changes
-      usePlayer.setState({ queue: tracks.slice(pos), index: 0, contextKind: kind });
+      // keep the current song playing (same audio, same position); the queue
+      // becomes the album rotated to start from it, wrapping past the end
+      const rotated = [...tracks.slice(pos), ...tracks.slice(0, pos)];
+      usePlayer.setState({ queue: rotated, index: 0, contextKind: kind });
     } else {
       usePlayer.getState().playQueue(tracks, 0, kind);
     }

@@ -27,6 +27,39 @@ export function PlayTrackButton({
   );
 }
 
+/**
+ * Play an album queue starting from a given track: the album rotates so that
+ * track leads and the rest follows in order, wrapping past the end back to
+ * the earlier songs.
+ */
+export function PlayAlbumButton({
+  tracks,
+  fromId,
+  label = "Play album",
+  className = "btn btn-ghost",
+}: {
+  tracks: TrackDTO[];
+  fromId: string;
+  label?: string;
+  className?: string;
+}) {
+  const playQueue = usePlayer((s) => s.playQueue);
+  return (
+    <button
+      onClick={() => {
+        if (tracks.length === 0) return;
+        const pos = Math.max(0, tracks.findIndex((t) => t.id === fromId));
+        playQueue([...tracks.slice(pos), ...tracks.slice(0, pos)], 0, "album");
+      }}
+      className={className}
+      aria-label={label}
+    >
+      <PlayIcon size={14} />
+      {label}
+    </button>
+  );
+}
+
 export function PlayAllButton({
   tracks,
   label = "Play all",

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Cover } from "@/components/Cover";
 import { LikeButton } from "@/components/LikeButton";
 import { AddToPlaylist } from "@/components/AddToPlaylist";
-import { PlayTrackButton } from "@/components/PlayButtons";
+import { PlayAlbumButton, PlayTrackButton } from "@/components/PlayButtons";
 import { UpNext } from "@/components/UpNext";
 import { getCurrentUser } from "@/lib/auth";
 import { getAlbumTracks, getPlaylistsFor, getTrackById } from "@/lib/queries";
@@ -61,9 +61,11 @@ export default async function TrackPage({ params }: PageProps<"/track/[id]">) {
             {" · "}
             {fmtPlays(track.playCount)} {track.playCount === 1 ? "play" : "plays"} ·{" "}
             {fmtDuration(track.durationSec)}
+            {track.isInstrumental && <> · Instrumental</>}
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <PlayTrackButton track={track} />
+            {albumTracks.length > 0 && <PlayAlbumButton tracks={albumTracks} fromId={track.id} />}
             <LikeButton
               trackId={track.id}
               initialLiked={!!track.liked}

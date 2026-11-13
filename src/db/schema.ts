@@ -87,6 +87,7 @@ export const tracks = pgTable(
     playCount: integer("play_count").notNull().default(0),
     likeCount: integer("like_count").notNull().default(0),
     isPublished: boolean("is_published").notNull().default(true),
+    isInstrumental: boolean("is_instrumental").notNull().default(false),
     sourceScId: text("source_sc_id"), // SoundCloud track id, for idempotent import
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
