@@ -42,7 +42,12 @@ export function QueueRow({
   return (
     // the trailing handle renders as a SIBLING of the play button — never
     // inside it (interactive content nested in a button is invalid HTML)
-    <li className={trailing ? "flex items-center gap-1" : undefined} style={style}>
+    // when the list has drag handles, the current row keeps the same
+    // right-hand slot so durations line up across rows
+    <li
+      className={trailing || current ? "flex items-center gap-1" : undefined}
+      style={style}
+    >
       <button
         onClick={onPlay}
         aria-label={isPlaying ? `Pause ${track.title}` : `Play ${track.title}`}
@@ -78,7 +83,7 @@ export function QueueRow({
           {fmtDuration(track.durationSec)}
         </span>
       </button>
-      {trailing}
+      {trailing ?? (current ? <span className="ml-1 w-6 shrink-0" aria-hidden /> : null)}
     </li>
   );
 }
