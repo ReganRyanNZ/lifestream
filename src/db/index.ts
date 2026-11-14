@@ -2,8 +2,12 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
+// NEON_STORAGE_DATABASE_URL is what the Vercel marketplace integration
+// auto-attaches; DATABASE_URL is the conventional name (local + scripts)
 const connectionString =
-  process.env.DATABASE_URL ?? "postgres://regan@localhost:5432/lifestream";
+  process.env.DATABASE_URL ??
+  process.env.NEON_STORAGE_DATABASE_URL ??
+  "postgres://regan@localhost:5432/lifestream";
 
 const globalForDb = globalThis as unknown as { __lifestreamSql?: postgres.Sql };
 
