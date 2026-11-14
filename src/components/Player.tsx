@@ -192,7 +192,7 @@ export function Player() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface/95 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-50 touch-none border-t border-border bg-surface/95 backdrop-blur"
       onPointerDown={(e) => {
         if (!e.isPrimary) return;
         drag.current = { x: e.clientX, y: e.clientY, vertical: false };
