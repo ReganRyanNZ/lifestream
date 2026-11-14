@@ -41,9 +41,6 @@ yarn-error.log*
 /.playwright-mcp/
 /.remember/
 
-# generated icons
-/public/icons/*.png
-
 # vercel
 .vercel
 
