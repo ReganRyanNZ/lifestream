@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { memo, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { usePlayer, type PlayContextKind } from "@/components/player-store";
 import { PauseIcon, PlayIcon } from "@/components/icons";
 import { fmtDuration } from "@/lib/format";
@@ -90,7 +90,9 @@ export function QueueRow({
  */
 type DragState = { k: number; id: string; startY: number; y: number; h: number; pos: number };
 
-export function QueuePanel() {
+// memoized — no props, so parent re-renders (e.g. per-frame sheet-drag
+// updates) never re-render the queue list
+export const QueuePanel = memo(function QueuePanel() {
   const queue = usePlayer((s) => s.queue);
   const index = usePlayer((s) => s.index);
   const contextKind = usePlayer((s) => s.contextKind);
@@ -262,4 +264,4 @@ export function QueuePanel() {
       {more > 0 && <p className="px-2 pt-2 text-xs text-muted">+{more} more in the queue</p>}
     </section>
   );
-}
+});

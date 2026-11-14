@@ -16,6 +16,10 @@ type PlayerState = {
   /** Full-screen "now playing + queue" view is open (YouTube Music style). */
   nowPlayingOpen: boolean;
   setNowPlaying: (open: boolean) => void;
+  /** Pixels the Now Playing sheet has been dragged up while closed (0 = none) —
+   *  lets the sheet rise under the thumb during the drag-up-to-open gesture. */
+  sheetDrag: number;
+  setSheetDrag: (px: number) => void;
   playQueue: (tracks: TrackDTO[], startIndex?: number, kind?: PlayContextKind) => void;
   /** Play one track immediately, then continue with a popularity-weighted "radio" queue drawn from all songs. */
   playStation: (seed: TrackDTO) => void;
@@ -101,6 +105,8 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   contextKind: null,
   nowPlayingOpen: false,
   setNowPlaying: (open) => set({ nowPlayingOpen: open }),
+  sheetDrag: 0,
+  setSheetDrag: (px) => set({ sheetDrag: Math.max(0, px) }),
 
   playQueue: (tracks, startIndex = 0, kind = "list") => {
     if (tracks.length === 0) return;

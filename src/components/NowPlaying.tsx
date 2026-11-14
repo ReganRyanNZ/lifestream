@@ -62,6 +62,7 @@ export function NowPlaying() {
   const track = usePlayer((s) => s.queue[s.index]);
   const open = usePlayer((s) => s.nowPlayingOpen);
   const setNowPlaying = usePlayer((s) => s.setNowPlaying);
+  const sheetDrag = usePlayer((s) => s.sheetDrag);
   const pathname = usePathname();
 
   const [authed, setAuthed] = useState(false);
@@ -130,6 +131,8 @@ export function NowPlaying() {
 
   if (!track) return null;
   const dragY = drag?.y ?? 0;
+  // sheet rising under the thumb during drag-up-to-open (driven by the bar)
+  const rising = !open && sheetDrag > 0;
 
   return (
     <div
@@ -140,9 +143,15 @@ export function NowPlaying() {
       tabIndex={-1}
       inert={!open}
       className={`fixed inset-0 z-[60] flex flex-col bg-background outline-none transition-[transform,visibility] duration-300 ease-out ${
-        open ? "visible translate-y-0" : "invisible translate-y-full"
-      }`}
-      style={dragY > 0 ? { transform: `translateY(${dragY}px)`, transition: "none" } : undefined}
+        open || rising ? "visible" : "invisible"
+      } ${open ? "translate-y-0" : !rising ? "translate-y-full" : ""}`}
+      style={
+        dragY > 0
+          ? { transform: `translateY(${dragY}px)`, transition: "none" }
+          : rising
+            ? { transform: `translateY(calc(100% - ${sheetDrag}px))`, transition: "none" }
+            : undefined
+      }
     >
       <div className="mx-auto flex h-full w-full max-w-6xl flex-col overflow-y-auto px-3 sm:px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,25rem)] lg:grid-rows-[minmax(0,1fr)] lg:gap-8 lg:overflow-hidden lg:px-4">
         {/* left: the current track (drag/swipe down on it to close) */}

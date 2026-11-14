@@ -53,6 +53,20 @@ export function Player() {
     probeAuthed().then(setAuthed);
   }, []);
 
+  // spacebar toggles playback when nothing interactive is focused (inputs,
+  // buttons, links and rows keep their native space behavior)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest?.("input, textarea, select, button, a, [contenteditable], [role='button'], [role='slider'], [role='menuitem']")) return;
+      e.preventDefault(); // keep the page from scrolling
+      usePlayer.getState().toggle();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   // bind audio events + accumulated-seconds observer, once
   useEffect(() => {
     bindAudio();
@@ -169,9 +183,9 @@ export function Player() {
     if (nxt) fetch(nxt.audioUrl).catch(() => {});
   }, [trackId, queueLength]);
 
-  // swipe up anywhere on the bar opens the full player (the button isn't
-  // the only way — matching the swipe-down that closes it)
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  // drag up anywhere on the bar to open the full player — the sheet rises
+  // under the thumb while dragging (via sheetDrag in the store)
+  const drag = useRef<{ x: number; y: number; vertical: boolean } | null>(null);
 
   // hidden while the full-screen Now Playing view is open (it covers the app)
   if (!track || nowPlayingOpen) return null;
@@ -179,17 +193,35 @@ export function Player() {
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface/95 backdrop-blur"
-      onTouchStart={(e) => {
-        touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      onPointerDown={(e) => {
+        if (!e.isPrimary) return;
+        drag.current = { x: e.clientX, y: e.clientY, vertical: false };
       }}
-      onTouchEnd={(e) => {
-        const s = touchStart.current;
-        touchStart.current = null;
-        if (!s) return;
-        const dy = e.changedTouches[0].clientY - s.y;
-        const dx = e.changedTouches[0].clientX - s.x;
-        // upward and mostly vertical (so the seek slider still works)
-        if (dy < -40 && Math.abs(dy) > Math.abs(dx) * 1.5) setNowPlaying(true);
+      onPointerMove={(e) => {
+        const d = drag.current;
+        if (!d) return;
+        const dy = d.y - e.clientY; // upward = positive
+        const dx = Math.abs(e.clientX - d.x);
+        if (!d.vertical) {
+          // lock in once the gesture is clearly upward (seek slider stays usable)
+          if (dy > 12 && dy > dx * 1.5) d.vertical = true;
+          else if (dy < -20) drag.current = null;
+        }
+        if (d.vertical) {
+          e.preventDefault?.();
+          usePlayer.getState().setSheetDrag(dy);
+        }
+      }}
+      onPointerUp={() => {
+        const d = drag.current;
+        drag.current = null;
+        const risen = usePlayer.getState().sheetDrag;
+        usePlayer.getState().setSheetDrag(0);
+        if (d?.vertical && risen > 120) setNowPlaying(true);
+      }}
+      onPointerCancel={() => {
+        drag.current = null;
+        usePlayer.getState().setSheetDrag(0);
       }}
     >
       {/* expand handle — the YouTube Music-style toggle into the full player */}
