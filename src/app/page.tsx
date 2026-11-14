@@ -66,9 +66,6 @@ export default async function HomePage() {
             </Link>
           </div>
           <TrackTileGrid tracks={popular} layout="row" />
-          <p className="pt-1 text-xs text-muted">
-            A rotating pick from the most-played songs over the last 30 days.
-          </p>
         </section>
       )}
 
