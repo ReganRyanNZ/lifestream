@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+const DEBOUNCE_MS = 300;
+const MIN_LIVE_CHARS = 2;
+
 /**
- * Search that navigates client-side (router.push) so it never triggers a full
- * page load — playback must keep running while searching.
+ * Search that navigates client-side (router) so it never triggers a full
+ * page load — playback must keep running while searching. Typing searches
+ * live (debounced, replacing the URL so history isn't spammed per keystroke);
+ * Enter still submits normally.
  */
 export function SearchBox({
   autoFocus = false,
@@ -18,6 +23,20 @@ export function SearchBox({
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
+  const lastSearched = useRef("");
+
+  // live search: debounced navigate as the user types
+  useEffect(() => {
+    const t = q.trim();
+    if (t.length < MIN_LIVE_CHARS) return;
+    const target = `/search?q=${encodeURIComponent(t)}`;
+    if (target === lastSearched.current) return;
+    const id = setTimeout(() => {
+      lastSearched.current = target;
+      router.replace(target);
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [q, router]);
 
   return (
     <form
@@ -26,6 +45,7 @@ export function SearchBox({
       onSubmit={(e) => {
         e.preventDefault();
         const t = q.trim();
+        lastSearched.current = t ? `/search?q=${encodeURIComponent(t)}` : "";
         router.push(t ? `/search?q=${encodeURIComponent(t)}` : "/search");
       }}
     >
