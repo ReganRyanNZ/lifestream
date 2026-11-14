@@ -6,7 +6,6 @@ import { Player } from "@/components/Player";
 import { NowPlaying } from "@/components/NowPlaying";
 import { SWRegister } from "@/components/SWRegister";
 import { SearchBox } from "@/components/SearchBox";
-import { logoutAction } from "@/app/actions";
 import { getCurrentUser } from "@/lib/auth";
 
 const geistSans = Geist({
@@ -32,7 +31,10 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
   },
   icons: {
-    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
     apple: [{ url: "/icons/apple-touch-icon.png" }],
   },
 };
@@ -79,22 +81,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <SearchBox className="min-w-0 w-full flex-1 sm:ml-auto sm:w-64 sm:flex-none" />
             <nav className="flex shrink-0 items-center gap-1">
               {user ? (
-                <>
-                  <Link href="/library" className="btn btn-ghost !px-3 !py-1.5">
-                    Library
-                  </Link>
-                  <Link
-                    href={`/u/${user.handle}`}
-                    className="hidden max-w-32 truncate text-sm text-muted hover:text-foreground md:block"
-                  >
-                    {user.displayName}
-                  </Link>
-                  <form action={logoutAction}>
-                    <button type="submit" className="btn btn-ghost !px-3 !py-1.5">
-                      Log out
-                    </button>
-                  </form>
-                </>
+                <Link href="/library" className="btn btn-ghost !px-3 !py-1.5" aria-label="Library">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-3.4 0-9 1.7-9 5.06V21h18v-1.69c0-3.36-5.6-5.06-9-5.06Z" />
+                  </svg>
+                </Link>
               ) : (
                 <>
                   <Link href="/login" className="btn btn-ghost !px-3 !py-1.5">
@@ -112,7 +103,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6">{children}</main>
 
         <footer className="border-t border-border py-6 pb-28 text-center text-xs text-muted">
-          Life Stream — music from our church community ·{" "}
+          <Link href="/about" className="hover:underline">
+            about
+          </Link>{" "}
+          ·{" "}
           <a href="mailto:support@lifestream.example" className="hover:underline">
             support
           </a>

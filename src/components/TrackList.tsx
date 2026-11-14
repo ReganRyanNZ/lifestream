@@ -41,26 +41,30 @@ export function TrackList({
       {tracks.map((t, i) => {
         const isCurrent = t.id === currentId;
         const isPlaying = isCurrent && playing;
+        const rowPlay = () =>
+          isCurrent ? toggle() : station ? playStation(t) : playQueue(tracks, i, contextKind);
         return (
           <li
             key={t.id}
-            className={`group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface-2 ${
+            role="button"
+            tabIndex={0}
+            aria-label={isPlaying ? `Pause ${t.title}` : `Play ${t.title}`}
+            onClick={rowPlay}
+            onKeyDown={(e) => {
+              // only when the row itself has focus — Enter/Space aimed at the
+              // like button, artist link, or remove button must do their job
+              if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                rowPlay();
+              }
+            }}
+            className={`group flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface-2 ${
               isCurrent ? "bg-surface-2" : ""
             }`}
           >
-            <button
-              onClick={() =>
-                isCurrent
-                  ? toggle()
-                  : station
-                    ? playStation(t)
-                    : playQueue(tracks, i, contextKind)
-              }
-              aria-label={isPlaying ? `Pause ${t.title}` : `Play ${t.title}`}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/80 transition hover:bg-accent hover:text-[#06121c]"
-            >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/80 transition group-hover:bg-accent group-hover:text-[#06121c]">
               {isPlaying ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
-            </button>
+            </span>
 
             {numbered && (
               <span className="w-5 shrink-0 text-right text-xs tabular-nums text-muted">
@@ -68,18 +72,18 @@ export function TrackList({
               </span>
             )}
 
-            <Link
-              href={`/track/${t.id}`}
-              className={`min-w-0 flex-1 truncate text-sm hover:underline ${
+            <span
+              className={`min-w-0 flex-1 truncate text-sm ${
                 isCurrent ? "font-semibold text-accent" : ""
               }`}
             >
               {t.title}
-            </Link>
+            </span>
 
             {showArtist && (
               <Link
                 href={`/u/${t.handle}`}
+                onClick={(e) => e.stopPropagation()}
                 className="hidden max-w-40 shrink-0 truncate text-xs text-muted hover:text-foreground hover:underline sm:inline"
               >
                 {t.artist}
@@ -93,16 +97,16 @@ export function TrackList({
               {fmtDuration(t.durationSec)}
             </span>
 
-            <LikeButton
-              trackId={t.id}
-              initialLiked={!!t.liked}
-              authed={authed}
-              compact
-            />
+            <span onClick={(e) => e.stopPropagation()}>
+              <LikeButton trackId={t.id} initialLiked={!!t.liked} authed={authed} compact />
+            </span>
 
             {onRemove && (
               <button
-                onClick={() => onRemove(t.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(t.id);
+                }}
                 aria-label={`Remove ${t.title} from playlist`}
                 className="btn-icon opacity-0 transition group-hover:opacity-100"
               >

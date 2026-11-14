@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cover } from "@/components/Cover";
 import { TrackList } from "@/components/TrackList";
-import { PlayAllButton, ShuffleButton } from "@/components/PlayButtons";
+import { PlayAllButton } from "@/components/PlayButtons";
 import { getCurrentUser } from "@/lib/auth";
 import { getUserAlbums, getUserByHandle, getUserTracks } from "@/lib/queries";
 import { colorFor } from "@/lib/format";
@@ -46,10 +46,6 @@ export default async function UserPage({ params }: PageProps<"/u/[handle]">) {
             )}
           </p>
         </div>
-        <div className="ml-auto flex gap-2">
-          {tracks.length > 0 && <PlayAllButton tracks={tracks} />}
-          {tracks.length > 0 && <ShuffleButton scope={{ kind: "user", id: user.id }} />}
-        </div>
       </header>
 
       {albums.length > 0 && (
@@ -79,7 +75,10 @@ export default async function UserPage({ params }: PageProps<"/u/[handle]">) {
       )}
 
       <section>
-        <h2 className="section-title">All songs</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="section-title !mb-0">All songs</h2>
+          {tracks.length > 0 && <PlayAllButton tracks={tracks} />}
+        </div>
         <TrackList tracks={tracks} showArtist={false} authed={!!viewer} />
       </section>
     </div>

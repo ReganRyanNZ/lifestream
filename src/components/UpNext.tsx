@@ -7,10 +7,9 @@ import type { TrackDTO } from "@/lib/types";
 
 /**
  * "Up next" for a track page: when this song is the one playing, shows the
- * live queue (QueuePanel) with a switch between the radio mix (all songs,
- * popularity weighted) and this song's album in order — swapping only what
- * comes after the current song. When it isn't playing: its album if it has
- * one, else the live queue if anything else is playing, else nothing.
+ * live queue (QueuePanel — current song plus what follows it, drag-to-
+ * reorder). When it isn't playing: its album if it has one, else the live
+ * queue if anything else is playing, else nothing.
  */
 export function UpNext({
   track,
@@ -25,7 +24,7 @@ export function UpNext({
   const playingThis = current?.id === track.id;
 
   if (playingThis) {
-    return <QueuePanel albumTracks={albumTracks} />;
+    return <QueuePanel />;
   }
 
   // this song isn't the one playing: show its album, or the live queue

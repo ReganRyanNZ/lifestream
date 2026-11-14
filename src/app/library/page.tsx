@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TrackList } from "@/components/TrackList";
 import { ShuffleButton } from "@/components/PlayButtons";
-import { createPlaylistAction } from "@/app/actions";
+import { createPlaylistAction, logoutAction } from "@/app/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { getLikedTracks, getPlaylistsFor } from "@/lib/queries";
 
@@ -22,7 +22,14 @@ export default async function LibraryPage() {
   return (
     <div className="flex flex-col gap-10">
       <div>
-        <h1 className="text-2xl font-bold sm:text-3xl">Your library</h1>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold sm:text-3xl">Your library</h1>
+          <form action={logoutAction}>
+            <button type="submit" className="btn btn-ghost !px-4 !py-2">
+              Log out
+            </button>
+          </form>
+        </div>
         <p className="mt-1 text-sm text-muted">
           Signed in as {user.displayName} (@{user.handle}). You stay signed in on this device
           until you log out.
@@ -35,7 +42,11 @@ export default async function LibraryPage() {
             Liked songs {liked.length > 0 && <span className="text-muted">({liked.length})</span>}
           </h2>
           {liked.length > 1 && (
-            <ShuffleButton scope={{ kind: "liked", id: user.id }} label="Shuffle liked" />
+            <ShuffleButton
+              scope={{ kind: "liked", id: user.id }}
+              label="Play liked"
+              icon="play"
+            />
           )}
         </div>
         <TrackList tracks={liked} authed />

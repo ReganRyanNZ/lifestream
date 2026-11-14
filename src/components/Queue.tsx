@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { usePlayer, type PlayContextKind } from "@/components/player-store";
 import { PauseIcon, PlayIcon } from "@/components/icons";
 import { fmtDuration } from "@/lib/format";
@@ -23,6 +23,8 @@ export function QueueRow({
   onPlay,
   current = false,
   numbered,
+  trailing,
+  style,
 }: {
   track: TrackDTO;
   onPlay: () => void;
@@ -30,16 +32,21 @@ export function QueueRow({
   current?: boolean;
   /** 1-based position shown to the user (hidden on hover for the play icon) */
   numbered?: number;
+  /** rendered at the row's end — the drag handle in the live queue */
+  trailing?: ReactNode;
+  style?: CSSProperties;
 }) {
   const playing = usePlayer((s) => s.playing);
   const isPlaying = current && playing;
 
   return (
-    <li>
+    // the trailing handle renders as a SIBLING of the play button — never
+    // inside it (interactive content nested in a button is invalid HTML)
+    <li className={trailing ? "flex items-center gap-1" : undefined} style={style}>
       <button
         onClick={onPlay}
         aria-label={isPlaying ? `Pause ${track.title}` : `Play ${track.title}`}
-        className={`group flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-surface-2 ${
+        className={`group flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-surface-2 ${
           current ? "bg-surface-2" : ""
         }`}
       >
@@ -71,20 +78,69 @@ export function QueueRow({
           {fmtDuration(track.durationSec)}
         </span>
       </button>
+      {trailing}
     </li>
   );
 }
 
 /**
- * The live queue: current song + up next, with radio-mix / album switching.
- * Used by the full-screen Now Playing view and the track page's "Up next".
- * When `albumTracks` isn't supplied, "Album in order" fetches them on demand.
+ * The live queue: current song + up next. Used by the full-screen Now Playing
+ * view and the track page's "Up next". Upcoming rows can be reordered by
+ * dragging the handle at their end (or arrow keys on the handle).
  */
-export function QueuePanel({ albumTracks }: { albumTracks?: TrackDTO[] }) {
+type DragState = { k: number; id: string; startY: number; y: number; h: number; pos: number };
+
+export function QueuePanel() {
   const queue = usePlayer((s) => s.queue);
   const index = usePlayer((s) => s.index);
   const contextKind = usePlayer((s) => s.contextKind);
-  const [albumBusy, setAlbumBusy] = useState(false);
+  const listRef = useRef<HTMLOListElement | null>(null);
+  // drag state: k = upcoming index; pos = insert position among the others
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const rects = useRef<{ top: number; h: number }[]>([]);
+  const dragRef = useRef<DragState | null>(null);
+
+  /** insert position among the non-dragged rows, from the pointer's y */
+  const insertPosAt = (y: number, dragK: number) => {
+    let pos = 0;
+    rects.current.forEach((r, i) => {
+      if (i !== dragK && y > r.top + r.h / 2) pos++;
+    });
+    return pos;
+  };
+
+  // while a drag is live, track the pointer on the window (no capture needed)
+  const dragging = drag !== null;
+  useEffect(() => {
+    if (!dragging) return;
+    const move = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const next = { ...d, y: e.clientY, pos: insertPosAt(e.clientY, d.k) };
+      dragRef.current = next;
+      setDrag(next);
+    };
+    const up = () => {
+      const d = dragRef.current;
+      dragRef.current = null;
+      setDrag(null);
+      if (!d || d.pos === d.k) return;
+      const s = usePlayer.getState();
+      // commit by track id: the queue may have shifted while dragging
+      // (track ended, station extended), which would move the wrong row
+      const from = s.queue.findIndex((t, i) => i > s.index && t.id === d.id);
+      if (from < 0) return;
+      s.moveQueueItem(from, s.index + 1 + d.pos);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, [dragging]);
 
   const current = queue[index];
   if (!current) return null;
@@ -92,68 +148,111 @@ export function QueuePanel({ albumTracks }: { albumTracks?: TrackDTO[] }) {
   const upcoming = queue.slice(index + 1, index + 1 + MAX_ROWS);
   const more = queue.length - (index + 1 + upcoming.length);
 
-  async function playAlbumInOrder() {
-    if (!current.albumId || albumBusy) return;
-    setAlbumBusy(true);
-    try {
-      let list = albumTracks;
-      if (!list) {
-        const j = await fetch(`/api/albums/${current.albumId}/tracks`)
-          .then((r) => (r.ok ? r.json() : null))
-          .catch(() => null);
-        list = (j as { tracks?: TrackDTO[] } | null)?.tracks;
-      }
-      // switchToQueue keeps the current song playing if it's in the album
-      if (list?.length) usePlayer.getState().switchToQueue(list, "album");
-    } finally {
-      setAlbumBusy(false);
-    }
+  function onDragStart(e: React.PointerEvent, k: number) {
+    e.preventDefault();
+    e.stopPropagation();
+    // children[0] is the current song's row; upcoming k is children[k + 1]
+    rects.current = upcoming.map((_, i) => {
+      const el = listRef.current?.children[i + 1] as HTMLElement | undefined;
+      if (!el) return { top: 0, h: 0 };
+      const r = el.getBoundingClientRect();
+      return { top: r.top, h: r.height };
+    });
+    const start = {
+      k,
+      id: upcoming[k]?.id,
+      startY: e.clientY,
+      y: e.clientY,
+      h: rects.current[k]?.h || 44,
+      pos: k,
+    };
+    dragRef.current = start;
+    setDrag(start);
   }
+
+  function moveRel(k: number, dir: -1 | 1) {
+    const s = usePlayer.getState();
+    const from = s.index + 1 + k;
+    const to = from + dir;
+    if (to > s.index && to < s.queue.length) s.moveQueueItem(from, to);
+  }
+
+  // current drag-derived layout
+  const pos = drag?.pos ?? -1;
 
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="section-title !mb-0">Up next</h2>
-        <span className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted">
-          {CONTEXT_LABEL[contextKind ?? "list"]}
-        </span>
-        <span className="ml-auto flex gap-2">
-          {contextKind !== "station" && (
-            <button
-              className="btn btn-ghost !px-3 !py-1.5"
-              onClick={() => usePlayer.getState().regenerateStation()}
-            >
-              Radio mix
-            </button>
-          )}
-          {current.albumId && contextKind !== "album" && (
-            <button
-              className="btn btn-ghost !px-3 !py-1.5"
-              onClick={playAlbumInOrder}
-              disabled={albumBusy}
-            >
-              {albumBusy ? "Loading…" : "Album in order"}
-            </button>
-          )}
-        </span>
+        {contextKind && contextKind !== "list" && (
+          <span className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted">
+            {CONTEXT_LABEL[contextKind]}
+          </span>
+        )}
       </div>
-      <ol className="flex flex-col gap-0.5">
+      <ol className="flex select-none flex-col gap-0.5" ref={listRef}>
         <QueueRow
           track={current}
           current
           onPlay={() => usePlayer.getState().toggle()}
         />
-        {upcoming.map((t, k) => (
-          <QueueRow
-            key={`${t.id}-${k}`}
-            track={t}
-            numbered={k + 1}
-            onPlay={() => {
-              const s = usePlayer.getState();
-              s.playQueue(s.queue, index + 1 + k, s.contextKind ?? "list");
-            }}
-          />
-        ))}
+        {upcoming.map((t, k) => {
+          let style: CSSProperties | undefined;
+          if (drag) {
+            if (k === drag.k) {
+              style = {
+                transform: `translateY(${drag.y - drag.startY}px)`,
+                zIndex: 10,
+                position: "relative",
+                boxShadow: "0 6px 20px rgb(0 0 0 / 0.35)",
+                borderRadius: "0.5rem",
+                transition: "box-shadow 0.15s",
+              };
+            } else {
+              const remaining = k > drag.k ? k - 1 : k;
+              const final = remaining >= pos ? remaining + 1 : remaining;
+              const shift = (final - k) * drag.h;
+              style = shift
+                ? { transform: `translateY(${shift}px)`, transition: "transform 0.15s" }
+                : { transition: "transform 0.15s" };
+            }
+          }
+          return (
+            <QueueRow
+              key={`${t.id}-${k}`}
+              track={t}
+              numbered={k + 1}
+              style={style}
+              onPlay={() => {
+                const s = usePlayer.getState();
+                s.playQueue(s.queue, index + 1 + k, s.contextKind ?? "list");
+              }}
+              trailing={
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Reorder ${t.title}`}
+                  onPointerDown={(e) => onDragStart(e, k)}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      moveRel(k, -1);
+                    } else if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      moveRel(k, 1);
+                    }
+                  }}
+                  className="ml-1 flex h-7 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded text-muted transition hover:text-foreground active:cursor-grabbing"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M4 7h16v2H4V7zm0 8h16v2H4v-2z" />
+                  </svg>
+                </span>
+              }
+            />
+          );
+        })}
       </ol>
       {upcoming.length === 0 && (
         <p className="px-2 py-4 text-sm text-muted">

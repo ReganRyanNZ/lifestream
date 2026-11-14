@@ -58,6 +58,25 @@ export function TrackMenu({
     }).catch(() => {});
   }
 
+  async function share() {
+    setMenuOpen(false);
+    const url = `${location.origin}/track/${track.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: track.title, url });
+      } catch {
+        /* user dismissed the share sheet */
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        notify("Link copied to clipboard");
+      } catch {
+        notify("Couldn't copy the link");
+      }
+    }
+  }
+
   async function toggleMute(kind: "mute" | "unmute" | "mute-album" | "unmute-album") {
     const song = kind === "mute" || kind === "unmute";
     const muting = kind.startsWith("mute");
@@ -95,14 +114,28 @@ export function TrackMenu({
             }`}
           >
             {!showPlaylists ? (
-              <button
-                role="menuitem"
-                onClick={() => setShowPlaylists(true)}
-                className="rounded-md px-2.5 py-2 text-left hover:bg-surface-2"
-              >
-                <span className="inline-block w-4" aria-hidden />
-                Add to playlist
-              </button>
+              <>
+                <button
+                  role="menuitem"
+                  onClick={share}
+                  className="rounded-md px-2.5 py-2 text-left hover:bg-surface-2"
+                >
+                  <span className="inline-block w-4 text-muted" aria-hidden>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                      <path d="M18 16.08a2.9 2.9 0 0 0-1.86.68l-7.02-4.1c.05-.2.08-.41.08-.62s-.03-.42-.08-.62l6.94-4.05A2.99 2.99 0 0 0 21 5a3 3 0 1 0-3 3c.21 0 .42-.03.62-.08l-6.94 4.05a3 3 0 1 0 0 4.06l7 4.08c-.05.18-.08.37-.08.56a2.92 2.92 0 1 0 2.92-2.92Z" />
+                    </svg>
+                  </span>
+                  Share
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => setShowPlaylists(true)}
+                  className="rounded-md px-2.5 py-2 text-left hover:bg-surface-2"
+                >
+                  <span className="inline-block w-4" aria-hidden />
+                  Add to playlist
+                </button>
+              </>
             ) : (
               <div className="flex flex-col">
                 <span className="px-2.5 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-muted">

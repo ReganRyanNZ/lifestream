@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toggleLike } from "@/app/actions";
-import { recordPreference } from "@/components/player-store";
+import { probeAuthed, recordPreference } from "@/components/player-store";
 
 export function LikeButton({
   trackId,
@@ -19,24 +19,36 @@ export function LikeButton({
   const [liked, setLiked] = useState(initialLiked);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  // synchronous double-click guard — `pending` can't cover the async probe
+  const busy = useRef(false);
 
-  function onClick() {
-    if (!authed) {
-      router.push("/login");
-      return;
-    }
-    if (pending) return;
-    setLiked(!liked); // optimistic
-    startTransition(async () => {
-      try {
-        const r = await toggleLike(trackId);
-        setLiked(r.liked);
-        // likes also boost the song in this listener's radio mixes
-        recordPreference(trackId, r.liked ? "like" : "unlike");
-      } catch {
-        setLiked(liked); // revert
+  async function onClick() {
+    if (busy.current || pending) return;
+    busy.current = true;
+    try {
+      if (!authed) {
+        // the page render may be stale (SW-cached or back-forward) — check the
+        // real session before bouncing a signed-in user to the login screen
+        const reallyAuthed = await probeAuthed();
+        if (!reallyAuthed) {
+          router.push("/login");
+          return;
+        }
       }
-    });
+      setLiked(!liked); // optimistic
+      startTransition(async () => {
+        try {
+          const r = await toggleLike(trackId);
+          setLiked(r.liked);
+          // likes also boost the song in this listener's radio mixes
+          recordPreference(trackId, r.liked ? "like" : "unlike");
+        } catch {
+          setLiked(liked); // revert
+        }
+      });
+    } finally {
+      busy.current = false;
+    }
   }
 
   return (

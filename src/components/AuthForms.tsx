@@ -51,7 +51,8 @@ export function RegisterForm() {
     <form action={action} className="flex flex-col gap-3">
       <ErrorBox error={state?.error} />
       <label className="flex flex-col gap-1 text-sm">
-        Your name <span className="text-muted">(this is your artist name)</span>
+        Your name{" "}
+        <span className="text-muted">(if you upload songs, this will be your default artist name)</span>
         <input className="input" name="displayName" autoComplete="name" required />
       </label>
       <label className="flex flex-col gap-1 text-sm">
@@ -59,7 +60,7 @@ export function RegisterForm() {
         <input className="input" name="email" type="email" autoComplete="email" required />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        Password <span className="text-muted">(8+ characters)</span>
+        Password
         <input
           className="input"
           name="password"

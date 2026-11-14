@@ -97,7 +97,7 @@ export default async function SearchPage({
       {results.tracks.length > 0 && (
         <section>
           <h2 className="section-title">Songs</h2>
-          <TrackList tracks={results.tracks} authed={!!user} />
+          <TrackList tracks={results.tracks} authed={!!user} station />
         </section>
       )}
     </div>

@@ -8,7 +8,7 @@ export default function RegisterPage() {
       <div>
         <h1 className="text-2xl font-bold">Join Life Stream</h1>
         <p className="mt-1 text-sm text-muted">
-          Listening needs no account — join to like, playlist, and share your own music.
+          Listening needs no account, but sign up to create playlists and get personalized mixes.
         </p>
       </div>
       <div className="card p-5">

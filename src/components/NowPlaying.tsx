@@ -179,7 +179,7 @@ export function NowPlaying() {
         </div>
 
         {/* right: the queue (scrolls on its own on wide screens) */}
-        <div className="min-h-0 flex-1 border-t border-border pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 lg:overflow-y-auto lg:overscroll-contain lg:border-l lg:border-t-0 lg:py-6 lg:pr-1">
+        <div className="min-h-0 flex-1 border-t border-border pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 lg:overflow-y-auto lg:overscroll-contain lg:border-l lg:border-t-0 lg:py-6 lg:pl-6 lg:pr-1">
           <QueuePanel />
         </div>
       </div>

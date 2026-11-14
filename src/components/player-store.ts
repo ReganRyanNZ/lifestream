@@ -23,6 +23,8 @@ type PlayerState = {
   switchToQueue: (tracks: TrackDTO[], kind: PlayContextKind) => void;
   /** Rebuild the queue behind the current song as a fresh radio mix. */
   regenerateStation: () => void;
+  /** Move a queued track to a new position (drag-to-reorder in Up next). */
+  moveQueueItem: (from: number, to: number) => void;
   toggle: () => void;
   next: () => void;
   prev: () => void;
@@ -45,6 +47,51 @@ export const audio: HTMLAudioElement | null =
         return a;
       })();
 
+/**
+ * Start playback, with a retry: Safari/WebView sometimes refuses a play()
+ * that races an in-flight src change (e.g. clicking a new song while paused).
+ * The audio element is already unlocked by earlier playback, so the retry
+ * once the track has loaded is allowed without a fresh gesture. If it still
+ * fails, the store reflects the truth (paused) instead of showing a silent
+ * "playing" state.
+ */
+function startAudio() {
+  if (!audio) return;
+  audio.play().catch(() => {
+    const retry = () => {
+      if (!usePlayer.getState().playing) return; // user changed their mind
+      audio.play().catch(() => usePlayer.setState({ playing: false }));
+    };
+    if (audio.readyState >= 1) retry();
+    else audio.addEventListener("loadeddata", retry, { once: true });
+  });
+}
+
+/** Fetch a popularity-weighted sample; null on any failure. */
+function fetchShuffleSample(): Promise<TrackDTO[] | null> {
+  return fetch(`/api/shuffle?client=${encodeURIComponent(getClientUuid())}`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j: { tracks?: TrackDTO[] } | null) => j?.tracks?.length ? j.tracks : null)
+    .catch(() => null);
+}
+
+/**
+ * Replace the queue with a fresh mix after the station's last song ends —
+ * unless the listener intervened while the sample was loading (played
+ * something else, replayed the ended song). audio.ended stays true only
+ * until a seek or a new load, so it is the precise "nothing happened" signal.
+ */
+function continueStationAfter() {
+  fetchShuffleSample().then((tracks) => {
+    if (!tracks) return;
+    const s = usePlayer.getState();
+    if (s.contextKind !== "station") return;
+    if (!audio || !audio.ended) return; // user replayed/switched — leave it
+    const endedId = s.queue[s.index]?.id;
+    s.playQueue(tracks.filter((t) => t.id !== endedId), 0, "station");
+  });
+}
+
 export const usePlayer = create<PlayerState>((set, get) => ({
   queue: [],
   index: 0,
@@ -64,7 +111,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       if (!audio.src || new URL(audio.src).href !== new URL(t.audioUrl, location.href).href) {
         audio.src = t.audioUrl;
       }
-      audio.play().catch(() => {});
+      startAudio();
     }
     set({ playing: true });
   },
@@ -74,24 +121,21 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     set({ queue: [seed], index: 0, position: 0, contextKind: "station" });
     if (audio) {
       audio.src = seed.audioUrl;
-      audio.play().catch(() => {});
+      startAudio();
     }
     set({ playing: true });
 
     // …then extend with a popularity-weighted sample of everything, so the
     // queue (and next-track preload) is ready long before the seed ends.
-    fetch(`/api/shuffle?client=${encodeURIComponent(getClientUuid())}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: { tracks?: TrackDTO[] } | null) => {
-        if (!j?.tracks?.length) return;
-        const s = usePlayer.getState();
-        // only extend if the seed is still what's on
-        if (!s.playing || s.queue[s.index]?.id !== seed.id) return;
-        const seen = new Set(s.queue.map((t) => t.id));
-        const rest = j.tracks.filter((t) => !seen.has(t.id));
-        if (rest.length > 0) usePlayer.setState({ queue: [...s.queue, ...rest] });
-      })
-      .catch(() => {});
+    fetchShuffleSample().then((tracks) => {
+      if (!tracks) return;
+      const s = usePlayer.getState();
+      // only extend if the seed is still what's on
+      if (!s.playing || s.queue[s.index]?.id !== seed.id) return;
+      const seen = new Set(s.queue.map((t) => t.id));
+      const rest = tracks.filter((t) => !seen.has(t.id));
+      if (rest.length > 0) usePlayer.setState({ queue: [...s.queue, ...rest] });
+    });
   },
 
   switchToQueue: (tracks, kind) => {
@@ -111,23 +155,30 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   regenerateStation: () => {
     const cur = usePlayer.getState().queue[usePlayer.getState().index];
     if (!cur) return;
-    fetch(`/api/shuffle?client=${encodeURIComponent(getClientUuid())}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: { tracks?: TrackDTO[] } | null) => {
-        if (!j?.tracks?.length) return;
-        const s = usePlayer.getState();
-        if (s.queue[s.index]?.id !== cur.id) return;
-        const rest = j.tracks.filter((t) => t.id !== cur.id);
-        usePlayer.setState({ queue: [cur, ...rest], index: 0, contextKind: "station" });
-      })
-      .catch(() => {});
+    fetchShuffleSample().then((tracks) => {
+      if (!tracks) return;
+      const s = usePlayer.getState();
+      if (s.queue[s.index]?.id !== cur.id) return;
+      const rest = tracks.filter((t) => t.id !== cur.id);
+      usePlayer.setState({ queue: [cur, ...rest], index: 0, contextKind: "station" });
+    });
+  },
+
+  moveQueueItem: (from, to) => {
+    const { queue, index } = get();
+    if (from === to || from <= index || to <= index) return; // current song stays put
+    if (from >= queue.length || to >= queue.length) return;
+    const q = queue.slice();
+    const [item] = q.splice(from, 1);
+    q.splice(to, 0, item);
+    set({ queue: q }); // index unchanged: from/to are both after it
   },
 
   toggle: () => {
     if (!audio) return;
     const t = get().queue[get().index];
     if (!t) return;
-    if (audio.paused) audio.play().catch(() => {});
+    if (audio.paused) startAudio();
     else audio.pause();
     // playing state is synced by the play/pause events in bindAudio()
   },
@@ -146,9 +197,12 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
     if (index + 1 < queue.length) {
       get().playQueue(queue, index + 1, get().contextKind ?? "list");
+    } else if (get().contextKind === "station") {
+      // the radio mix never ends: draw a fresh weighted sample and continue
+      continueStationAfter();
     } else {
-      set({ playing: false });
-      audio?.pause();
+      // lists (albums, playlists, artist songs) wrap back to the top
+      get().playQueue(queue, 0, get().contextKind ?? "list");
     }
   },
 

@@ -133,8 +133,10 @@ export function cleanTitle(raw, artist) {
   let trackNo = null;
 
   if (artist === "Rina") {
-    const m = /^(\d{1,3})[.\s]+\s*(.+)$/.exec(t);
-    if (m) {
+    // leading numbers — including "68b." and doubled "73. 1." prefixes
+    for (let i = 0; i < 3; i++) {
+      const m = /^(\d{1,3})[a-z]?[.\s]+\s*(.+)$/.exec(t);
+      if (!m) break;
       trackNo = +m[1];
       t = m[2];
     }
@@ -144,6 +146,16 @@ export function cleanTitle(raw, artist) {
       if (!m2 || /[a-z.]/.test(m2[0].replace(" - ", "").replace("with ", ""))) break;
       t = t.slice(0, m2.index);
     }
+    t = t
+      .replace(/\s+-\s+\d+\s+saints$/i, "") // "- 4 saints"
+      .replace(/\s*\((v\d)\)$/i, "") // "(v1)"
+      .replace(/\s+v\d$/i, "") // trailing "v2"
+      .replace(/(\d+)\s*v(s?)(\d+)/g, "$1:$3") // "84vs6-7" / "55 v8-11" → "84:6-7"
+      .replace(/\(revised\)\s*$/i, "") // "(revised)"
+      .replace(/\s+MASH$/i, " (mash)") // " MASH" → " (mash)"
+      .replace(/\(MASH\)/i, "(mash)")
+      .replace(/\s+20\d\d$/, "") // trailing year
+      .replace(/\s+[A-Z0-9]+&[A-Z0-9&]+$/, ""); // bare "EH&RT"
   } else {
     const m = /^(\d{1,3})([.\s])\s*(.*)$/.exec(t);
     if (m && (m[1].length >= 2 || m[2] === ".")) {
@@ -162,6 +174,15 @@ export function cleanTitle(raw, artist) {
 }
 
 const cleanAlbumTitle = (name) => name.replace(/_/g, ":").trim();
+
+// ---------- CLI guard: importing this module (for cleanTitle etc.) must not
+// run an import — only execute when invoked directly ----------
+const IS_MAIN =
+  process.argv[1] &&
+  path.resolve(process.argv[1]) ===
+    path.resolve(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
+
+if (IS_MAIN) {
 
 // ---------- scan ----------
 
@@ -396,3 +417,5 @@ for (const a of plan) {
 
 console.log(`\nDone: ${totalTracks} tracks, ${totalAlbums} albums.`);
 await sql.end();
+
+} // end IS_MAIN

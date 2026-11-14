@@ -154,7 +154,7 @@ export async function registerAction(
 
   if (displayName.length < 1) return { error: "Please enter a name." };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Please enter a valid email." };
-  if (password.length < 8) return { error: "Password must be at least 8 characters." };
+  if (password.length < 1) return { error: "Please enter a password." };
 
   const existing = await db
     .select({ id: users.id })

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cover } from "@/components/Cover";
 import { TrackList } from "@/components/TrackList";
-import { PlayAllButton, ShuffleButton } from "@/components/PlayButtons";
+import { PlayAllButton } from "@/components/PlayButtons";
 import { getCurrentUser } from "@/lib/auth";
 import { getAlbum, getAlbumTracks } from "@/lib/queries";
 import { publicUrlFor } from "@/lib/storage";
@@ -52,8 +52,7 @@ export default async function AlbumPage({ params }: PageProps<"/album/[id]">) {
           </p>
           {tracks.length > 0 && (
             <div className="mt-4 flex gap-2">
-              <PlayAllButton tracks={tracks} />
-              <ShuffleButton scope={{ kind: "album", id: album.id }} />
+              <PlayAllButton tracks={tracks} label="Play" />
             </div>
           )}
         </div>

@@ -1,11 +1,14 @@
 /* Life Stream service worker — offline audio caching.
  *
  * Caches:
- *   ls-static-v1  — hashed build assets, icons, manifest (cache-first)
- *   ls-audio-v1   — recently played audio + artwork (cache-first, bounded LRU-ish)
- *   ls-pinned-v1  — explicitly pinned "download" content (never auto-evicted)
- *   ls-pages-v1   — visited pages (network-first, offline fallback)
- *   ls-api-v1     — API GETs (network-first)
+ *   ls-static-v2  — hashed build assets, icons, manifest (cache-first)
+ *   ls-audio-v2   — recently played audio + artwork (cache-first, bounded LRU-ish)
+ *   ls-pinned-v2  — explicitly pinned "download" content (never auto-evicted)
+ *   ls-api-v2     — API GETs (network-first)
+ *
+ * Page HTML is NEVER cached: it embeds per-viewer state (signed-in top bar,
+ * liked hearts), and a cached logged-out copy made hearts redirect signed-in
+ * users to /login. Offline navigations get the offline notice instead.
  *
  * Audio responses are cached normalized (status 200, no Content-Range) so the
  * worker can synthesize 206 range responses for seeking and serve full files
@@ -13,11 +16,10 @@
  * crossorigin="anonymous"), otherwise responses are opaque and unreadable.
  */
 
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC = `ls-static-${VERSION}`;
 const AUDIO = `ls-audio-${VERSION}`;
 const PINNED = `ls-pinned-${VERSION}`;
-const PAGES = `ls-pages-${VERSION}`;
 const API = `ls-api-${VERSION}`;
 const AUDIO_BUDGET = 200; // max entries in the playback cache
 
@@ -28,7 +30,7 @@ self.addEventListener("install", () => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      const keep = new Set([STATIC, AUDIO, PINNED, PAGES, API]);
+      const keep = new Set([STATIC, AUDIO, PINNED, API]);
       for (const name of await caches.keys()) {
         if (!keep.has(name)) await caches.delete(name);
       }
@@ -82,8 +84,10 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (url.pathname.startsWith("/api/")) {
-    // never intercept write-ish or volatile endpoints
-    if (url.pathname.startsWith("/api/plays")) return;
+    // never intercept write-ish or volatile endpoints: plays are beacons, and
+    // /api/me reports the live sign-in state (a cached logged-out answer is
+    // what made hearts bounce signed-in users to the login screen)
+    if (url.pathname.startsWith("/api/plays") || url.pathname === "/api/me") return;
     event.respondWith(networkFirst(req, API));
     return;
   }
@@ -130,7 +134,7 @@ connection does.</p></div></body></html>`;
 
 async function navigationHandler(req) {
   try {
-    return await networkFirst(req, PAGES);
+    return await fetch(req);
   } catch {
     return new Response(OFFLINE_HTML, {
       status: 200,
