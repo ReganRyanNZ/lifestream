@@ -9,8 +9,17 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "All songs" };
 
-/** Browse every song on the site, grouped by artist. */
-export default async function SongsPage() {
+/** Artists per page — keeps the rendered list snappy (the full library is
+ *  2,900+ rows / several MB of HTML, which took seconds to paint). */
+const ARTISTS_PER_PAGE = 7;
+
+/** Browse every song on the site, grouped by artist, paged by artist. */
+export default async function SongsPage({
+  searchParams,
+}: PageProps<"/songs">) {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(String(sp?.page ?? "1"), 10) || 1);
+
   const [tracks, user] = await Promise.all([
     getAllTracks(),
     getCurrentUser().catch(() => null),
@@ -23,6 +32,11 @@ export default async function SongsPage() {
     g.tracks.push(t);
     byArtist.set(t.handle, g);
   }
+
+  const artists = [...byArtist.entries()];
+  const pages = Math.max(1, Math.ceil(artists.length / ARTISTS_PER_PAGE));
+  const current = Math.min(page, pages);
+  const slice = artists.slice((current - 1) * ARTISTS_PER_PAGE, current * ARTISTS_PER_PAGE);
 
   return (
     <div className="flex flex-col gap-10">
@@ -37,7 +51,7 @@ export default async function SongsPage() {
         <ShuffleButton label="Play" icon="play" className="btn btn-primary !px-5 !py-2.5" />
       </div>
 
-      {[...byArtist.entries()].map(([handle, { userArtist, tracks }]) => (
+      {slice.map(([handle, { userArtist, tracks }]) => (
         <section key={handle}>
           <h2 className="section-title">
             <Link href={`/u/${handle}`} className="hover:text-accent">
@@ -50,6 +64,28 @@ export default async function SongsPage() {
           <TrackList tracks={tracks} showArtist={false} authed={!!user} />
         </section>
       ))}
+
+      {pages > 1 && (
+        <nav className="flex items-center justify-between gap-2 pb-2 text-sm">
+          {current > 1 ? (
+            <Link href={`/songs?page=${current - 1}`} className="btn btn-ghost !px-4 !py-2">
+              ← Previous
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="text-muted">
+            Page {current} of {pages}
+          </span>
+          {current < pages ? (
+            <Link href={`/songs?page=${current + 1}`} className="btn btn-ghost !px-4 !py-2">
+              Next →
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
+      )}
     </div>
   );
 }
