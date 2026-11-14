@@ -169,11 +169,29 @@ export function Player() {
     if (nxt) fetch(nxt.audioUrl).catch(() => {});
   }, [trackId, queueLength]);
 
+  // swipe up anywhere on the bar opens the full player (the button isn't
+  // the only way — matching the swipe-down that closes it)
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
   // hidden while the full-screen Now Playing view is open (it covers the app)
   if (!track || nowPlayingOpen) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface/95 backdrop-blur">
+    <div
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface/95 backdrop-blur"
+      onTouchStart={(e) => {
+        touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }}
+      onTouchEnd={(e) => {
+        const s = touchStart.current;
+        touchStart.current = null;
+        if (!s) return;
+        const dy = e.changedTouches[0].clientY - s.y;
+        const dx = e.changedTouches[0].clientX - s.x;
+        // upward and mostly vertical (so the seek slider still works)
+        if (dy < -40 && Math.abs(dy) > Math.abs(dx) * 1.5) setNowPlaying(true);
+      }}
+    >
       {/* expand handle — the YouTube Music-style toggle into the full player */}
       <button
         onClick={() => setNowPlaying(true)}

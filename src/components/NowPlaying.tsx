@@ -65,9 +65,10 @@ export function NowPlaying() {
   const pathname = usePathname();
 
   const [authed, setAuthed] = useState(false);
-  const [dragY, setDragY] = useState(0);
+  // drag-to-close: pointer events (touch works too), tracked on the window
+  const [drag, setDrag] = useState<{ startY: number; y: number } | null>(null);
+  const dragRef = useRef<{ startY: number; y: number } | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const touchStartY = useRef<number | null>(null);
 
   // navigating (search, a track page, …) always returns to the browse view
   useEffect(() => {
@@ -100,7 +101,35 @@ export function NowPlaying() {
     probeAuthed().then(setAuthed);
   }, []);
 
+  // live swipe-down tracking while a sheet drag is active
+  const dragging = drag !== null;
+  useEffect(() => {
+    if (!dragging) return;
+    const move = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const next = { ...d, y: Math.max(0, e.clientY - d.startY) };
+      dragRef.current = next;
+      setDrag(next);
+    };
+    const up = () => {
+      const d = dragRef.current;
+      dragRef.current = null;
+      setDrag(null);
+      if (d && d.y > 120) setNowPlaying(false);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, [dragging, setNowPlaying]);
+
   if (!track) return null;
+  const dragY = drag?.y ?? 0;
 
   return (
     <div
@@ -116,22 +145,14 @@ export function NowPlaying() {
       style={dragY > 0 ? { transform: `translateY(${dragY}px)`, transition: "none" } : undefined}
     >
       <div className="mx-auto flex h-full w-full max-w-6xl flex-col overflow-y-auto px-3 sm:px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,25rem)] lg:grid-rows-[minmax(0,1fr)] lg:gap-8 lg:overflow-hidden lg:px-4">
-        {/* left: the current track (swipe down on it to close, on touch) */}
+        {/* left: the current track (drag/swipe down on it to close) */}
         <div
           className="flex flex-col gap-4 pb-6 pt-2 touch-none lg:justify-center lg:overflow-y-auto lg:py-6"
-          onTouchStart={(e) => {
-            touchStartY.current = e.touches[0].clientY;
-          }}
-          onTouchMove={(e) => {
-            if (touchStartY.current == null) return;
-            const dy = e.touches[0].clientY - touchStartY.current;
-            if (dy > 0) setDragY(dy);
-          }}
-          onTouchEnd={() => {
-            const shouldClose = dragY > 120;
-            touchStartY.current = null;
-            setDragY(0);
-            if (shouldClose) setNowPlaying(false);
+          onPointerDown={(e) => {
+            if (!e.isPrimary) return;
+            const start = { startY: e.clientY, y: 0 };
+            dragRef.current = start;
+            setDrag(start);
           }}
         >
           <button
