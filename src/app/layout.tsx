@@ -107,7 +107,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             about
           </Link>{" "}
           ·{" "}
-          <a href="mailto:support@lifestream.example" className="hover:underline">
+          <a
+            href="mailto:lifestreambrothers@gmail.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
             support
           </a>
         </footer>
