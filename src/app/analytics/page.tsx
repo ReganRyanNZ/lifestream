@@ -88,7 +88,7 @@ export default async function AnalyticsPage() {
       <div>
         <h1 className="text-2xl font-bold sm:text-3xl">Analytics</h1>
         <p className="mt-1 text-sm text-muted">
-          Real plays (5+ seconds listened) recorded by the site itself.
+          Real plays (12+ seconds listened) recorded by the site itself.
         </p>
       </div>
 

@@ -112,7 +112,7 @@ function correlation(a, b, maxLag = 40) {
 const tracks = await sql`
   select t.id, t.title, t.duration_sec, t.audio_key, t.album_id, t.created_at,
          u.handle as owner, a.title as album_title,
-         (select count(*) from play_events pe where pe.track_id = t.id and pe.seconds_played >= 5) as plays
+         (select count(*) from play_events pe where pe.track_id = t.id and pe.seconds_played >= 12) as plays
   from tracks t join users u on u.id = t.user_id left join albums a on a.id = t.album_id`;
 
 const byNorm = new Map();

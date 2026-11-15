@@ -128,14 +128,14 @@ export async function getRecentlyPlayed(
   limit = 12,
 ): Promise<TrackDTO[]> {
   // events from this device OR this account (pre-login device history carries
-  // over), but only real listening (>= 5s)
+  // over), but only real listening (>= 12s)
   const scope = userId
     ? or(eq(playEvents.clientUuid, clientUuid), eq(playEvents.userId, userId))
     : eq(playEvents.clientUuid, clientUuid);
   const rows = await db
     .select({ id: playEvents.trackId })
     .from(playEvents)
-    .where(and(scope, gte(playEvents.secondsPlayed, 5)))
+    .where(and(scope, gte(playEvents.secondsPlayed, 12)))
     .groupBy(playEvents.trackId)
     .orderBy(desc(sql`max(${playEvents.playedAt})`))
     .limit(limit);
