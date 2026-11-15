@@ -24,11 +24,18 @@ export default async function LibraryPage() {
       <div>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-bold sm:text-3xl">Your library</h1>
-          <form action={logoutAction}>
-            <button type="submit" className="btn btn-ghost !px-4 !py-2">
-              Log out
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            {user.isAdmin && (
+              <Link href="/analytics" className="text-sm text-muted hover:text-foreground">
+                Analytics
+              </Link>
+            )}
+            <form action={logoutAction}>
+              <button type="submit" className="btn btn-ghost !px-4 !py-2">
+                Log out
+              </button>
+            </form>
+          </div>
         </div>
         <p className="mt-1 text-sm text-muted">
           Signed in as {user.displayName} (@{user.handle}). You stay signed in on this device
