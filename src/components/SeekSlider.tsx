@@ -39,3 +39,15 @@ export function SeekSlider({ fallbackDurationSec = 0 }: { fallbackDurationSec?: 
     </div>
   );
 }
+
+/** Elapsed / total time only — the mini bar's small-screen stand-in for the
+ *  slider (seeking stays available in the full Now Playing view). */
+export function TimeOnly({ fallbackDurationSec = 0 }: { fallbackDurationSec?: number }) {
+  const position = usePlayer((s) => s.position);
+  const duration = usePlayer((s) => s.duration) || fallbackDurationSec;
+  return (
+    <span className="text-xs tabular-nums text-muted">
+      {fmtDuration(position)} <span className="opacity-60">/ {fmtDuration(duration)}</span>
+    </span>
+  );
+}

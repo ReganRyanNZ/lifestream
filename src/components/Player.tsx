@@ -14,7 +14,7 @@ import {
 } from "@/components/player-store";
 import { Cover } from "@/components/Cover";
 import { LikeButton } from "@/components/LikeButton";
-import { SeekSlider } from "@/components/SeekSlider";
+import { SeekSlider, TimeOnly } from "@/components/SeekSlider";
 import { TrackMenu } from "@/components/TrackMenu";
 import { PauseIcon, PlayIcon } from "@/components/icons";
 
@@ -261,7 +261,13 @@ export function Player() {
             </Link>
           </div>
           <div className="mt-1.5">
-            <SeekSlider fallbackDurationSec={track.durationSec} />
+            {/* small screens: ticking time only; sm and up: the seek slider */}
+            <div className="sm:hidden">
+              <TimeOnly fallbackDurationSec={track.durationSec} />
+            </div>
+            <div className="hidden sm:block">
+              <SeekSlider fallbackDurationSec={track.durationSec} />
+            </div>
           </div>
         </div>
 
