@@ -19,7 +19,7 @@ export function SeekSlider({ fallbackDurationSec = 0 }: { fallbackDurationSec?: 
 
   return (
     <div className="flex items-center gap-2">
-      <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-muted">
+      <span className="w-10 shrink-0 text-right text-xs tabular-nums text-muted">
         {fmtDuration(position)}
       </span>
       <input
@@ -30,10 +30,10 @@ export function SeekSlider({ fallbackDurationSec = 0 }: { fallbackDurationSec?: 
         value={Math.min(position, duration)}
         onChange={onInput}
         aria-label="Seek"
-        className="min-w-0 flex-1"
+        className="min-w-0 h-6 flex-1 cursor-pointer" /* h-6: taller touch target */
         style={{ accentColor: "var(--accent)" }}
       />
-      <span className="w-9 shrink-0 text-[11px] tabular-nums text-muted">
+      <span className="w-10 shrink-0 text-xs tabular-nums text-muted">
         {fmtDuration(duration)}
       </span>
     </div>

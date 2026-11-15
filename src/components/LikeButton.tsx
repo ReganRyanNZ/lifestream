@@ -59,11 +59,11 @@ export function LikeButton({
       title={authed ? undefined : "Sign in to like"}
       className={`shrink-0 transition hover:scale-110 ${
         liked ? "text-rose-400" : "text-muted hover:text-foreground"
-      } ${compact ? "p-1" : "btn btn-ghost"}`}
+      } ${compact ? "p-1.5" : "btn btn-ghost"}`}
     >
       <svg
-        width={compact ? 15 : 16}
-        height={compact ? 15 : 16}
+        width={compact ? 17 : 16}
+        height={compact ? 17 : 16}
         viewBox="0 0 24 24"
         fill={liked ? "currentColor" : "none"}
         stroke="currentColor"

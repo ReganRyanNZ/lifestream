@@ -229,18 +229,18 @@ export function Player() {
         onClick={() => setNowPlaying(true)}
         aria-label="Now playing"
         aria-expanded={false}
-        className="absolute -top-3.5 left-1/2 flex h-7 w-16 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-surface/95 text-muted shadow-md backdrop-blur transition hover:text-foreground"
+        className="absolute -top-4 left-1/2 flex h-8 w-24 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-surface/95 text-muted shadow-md backdrop-blur transition hover:text-foreground"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z" />
         </svg>
       </button>
 
-      <div className="mx-auto flex max-w-6xl items-center gap-3 px-3 py-2 sm:gap-4 sm:px-4 sm:py-2.5">
+      <div className="mx-auto flex max-w-6xl items-center gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5">
         <button
           onClick={() => setNowPlaying(true)}
           aria-label={`Now playing: ${track.title}`}
-          className="h-11 w-11 shrink-0 cursor-pointer sm:h-12 sm:w-12"
+          className="h-14 w-14 shrink-0 cursor-pointer sm:h-16 sm:w-16"
         >
           <Cover title={track.title} artworkUrl={track.artworkUrl} color={track.color} rounded="rounded-md" />
         </button>
@@ -249,18 +249,18 @@ export function Player() {
           <div className="flex items-baseline gap-2">
             <button
               onClick={() => setNowPlaying(true)}
-              className="truncate text-sm font-semibold hover:underline"
+              className="truncate text-[15px] font-semibold hover:underline sm:text-base"
             >
               {track.title}
             </button>
             <Link
               href={`/u/${track.handle}`}
-              className="hidden shrink-0 truncate text-xs text-muted hover:text-foreground hover:underline sm:inline"
+              className="hidden shrink-0 truncate text-[13px] text-muted hover:text-foreground hover:underline sm:inline sm:text-sm"
             >
               {track.artist}
             </Link>
           </div>
-          <div className="mt-1">
+          <div className="mt-1.5">
             <SeekSlider fallbackDurationSec={track.durationSec} />
           </div>
         </div>
@@ -268,20 +268,28 @@ export function Player() {
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <TrackMenu key={track.id} track={track} />
 
-          <button onClick={prev} aria-label="Previous track" className="btn-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <button
+            onClick={prev}
+            aria-label="Previous track"
+            className="btn-icon !h-11 !w-11"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d="M6 5h2v14H6zM20 5v14l-11-7z" />
             </svg>
           </button>
           <button
             onClick={toggle}
             aria-label={playing ? "Pause" : "Play"}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-[#06121c] transition hover:brightness-110"
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-[#06121c] transition hover:brightness-110"
           >
-            {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+            {playing ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
           </button>
-          <button onClick={next} aria-label="Next track" className="btn-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <button
+            onClick={next}
+            aria-label="Next track"
+            className="btn-icon !h-11 !w-11"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d="M16 5h2v14h-2zM4 5l11 7-11 7z" />
             </svg>
           </button>
