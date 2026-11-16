@@ -109,10 +109,8 @@ export function Player() {
 
   // Media Session: register action handlers as early as possible — this is
   // what lets iOS Safari keep playing / advance tracks with the screen locked.
-  // seekbackward/seekforward are deliberately NOT registered: iOS replaces
-  // the next/previous track buttons with ±15s seek buttons when they are,
-  // and a music app wants track skipping on the lock screen. Seeking stays
-  // available via seekto (the lock-screen scrubber).
+  // All actions are registered plainly; which lock-screen buttons iOS draws
+  // (track skip vs seek) is the OS's call per context.
   useEffect(() => {
     const ms = navigator.mediaSession;
     if (!ms) return;
@@ -130,14 +128,14 @@ export function Player() {
     set("seekto", (d) => {
       if (typeof d?.seekTime === "number") usePlayer.getState().seek(d.seekTime);
     });
-    // explicit null-clear, not just omission — if the app resumed from memory
-    // with handlers from an older bundle, this re-registers them as unset
-    try {
-      ms.setActionHandler("seekbackward", null);
-      ms.setActionHandler("seekforward", null);
-    } catch {
-      /* action unsupported */
-    }
+    set("seekbackward", (d) =>
+      usePlayer
+        .getState()
+        .seek(Math.max(0, usePlayer.getState().position - (d?.seekOffset ?? 10))),
+    );
+    set("seekforward", (d) =>
+      usePlayer.getState().seek(usePlayer.getState().position + (d?.seekOffset ?? 10)),
+    );
   }, []);
 
   // metadata + lock-screen artwork per track
