@@ -130,23 +130,13 @@ export function Player() {
     set("seekto", (d) => {
       if (typeof d?.seekTime === "number") usePlayer.getState().seek(d.seekTime);
     });
-    // iOS home-screen (standalone) apps draw ±10s seek buttons on the lock
-    // screen no matter which handlers are registered — so in standalone mode
-    // we make those buttons skip tracks instead. In the browser we leave them
-    // unregistered, which is what gives real ⏮⏭ buttons there.
-    const standalone =
-      window.matchMedia?.("(display-mode: standalone)").matches ||
-      (navigator as { standalone?: boolean }).standalone === true;
-    if (standalone) {
-      set("seekbackward", () => usePlayer.getState().prev());
-      set("seekforward", () => usePlayer.getState().next());
-    } else {
-      try {
-        ms.setActionHandler("seekbackward", null);
-        ms.setActionHandler("seekforward", null);
-      } catch {
-        /* action unsupported */
-      }
+    // explicit null-clear, not just omission — if the app resumed from memory
+    // with handlers from an older bundle, this re-registers them as unset
+    try {
+      ms.setActionHandler("seekbackward", null);
+      ms.setActionHandler("seekforward", null);
+    } catch {
+      /* action unsupported */
     }
   }, []);
 
