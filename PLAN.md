@@ -1,4 +1,4 @@
-# lifestream — SoundCloud-style music PWA
+# lifestream — streaming music PWA
 
 Status: planning · Last updated: 2026-11-11 · Decisions locked in §17
 
@@ -109,22 +109,20 @@ Per decision #9: plenty of iPhone users; we do our best for them (the above), bu
 
 ---
 
-## 6. Migrating the existing SoundCloud library
+## 6. Importing the existing library
 
-Source: https://soundcloud.com/hymnstream/tracks — **verified working with yt-dlp on 2026-11-11.**
+Source: the hymnstream account's public tracks — **verified working with yt-dlp on 2026-11-11.**
 
 Findings from the verification run:
 
 - **1,053 tracks** enumerable; single-track download tested end-to-end (audio + info JSON + artwork, ~5s/track).
-- **Originals are not exposed.** SoundCloud serves only its own transcodes; for the sampled tracks the best is **HLS AAC 160 kbps** (m4a) — good quality (≈ mp3 192k), fine for streaming. `download` (original file) appears only if downloads were enabled per-track; none sampled had it.
+- **Originals are not exposed.** The source site serves only its own transcodes; for the sampled tracks the best is **HLS AAC 160 kbps** (m4a) — good quality (≈ mp3 192k), fine for streaming. `download` (original file) appears only if downloads were enabled per-track; none sampled had it.
 - Metadata available per track: title, duration, upload date, description, artwork URL. → Estimated full download: ~2.5–4 GB, ~2–3 h with polite rate limiting (one-time, resumable).
 
-Import pipeline (`scripts/import-soundcloud.mjs`):
+Import pipeline (`scripts/import-library.mjs`):
 
-1. `yt-dlp` pulls the whole account with `--download-archive` (resumable), `-f hls_aac_160k` (fall back to best available), `--write-info-json`, optional `--write-thumbnail`, into `imports/soundcloud/` (**gitignored** — never commit audio).
-2. Script walks the folder, parses info JSONs, uploads each file to R2 with correct MIME (`audio/mp4` for m4a), stores `source_sc_id` for idempotent re-runs, inserts track rows under the owner account.
-
-Open sub-questions (§18): whether the original files still exist somewhere (strictly better than transcodes — hybrid import matches on SC id), and whether to carry over existing SoundCloud artwork for the back-catalog (recommended: yes, zero effort; new uploads use the manual/color flow in §12).
+1. `yt-dlp` pulls the whole account with `--download-archive` (resumable), `-f hls_aac_160k` (fall back to best available), `--write-info-json`, optional `--write-thumbnail`, into `imports/` (**gitignored** — never commit audio).
+2. Script walks the folder, parses info JSONs, uploads each file to R2 with correct MIME (`audio/mp4` for m4a), stores the source track id for idempotent re-runs, inserts track rows under the owner account.
 
 ---
 
@@ -192,7 +190,7 @@ Per decision #16, per-song, simple:
 
 - **Optional manual artwork upload** (image, resized server-side to a few standard sizes, stored in R2).
 - **No artwork → generated cover:** the track title (and artist name) rendered on a solid background chosen from a small fixed palette (simple color picker at upload time, stored as `color`). Same mechanism for albums and user avatars. No ID3-embedded art extraction, no placeholder images to design.
-- Import exception (§6): the SoundCloud back-catalog can keep its existing artwork (pending answer, §18).
+- Import exception (§6): the imported back-catalog can keep its existing artwork.
 
 ---
 
@@ -201,7 +199,7 @@ Per decision #16, per-song, simple:
 Own the data in Postgres — no external analytics vendor needed (free, private, answers exactly the three questions asked):
 
 - **Play counting:** a "play" registers after 30s or 50% listened (whichever first — YouTube-style) so skips don't inflate. Offline plays queue in IndexedDB with a client UUID and sync later (deduped).
-- **Public play counts** on tracks (SoundCloud/YouTube-style "1.2k plays") — denormalised `play_count` on tracks.
+- **Public play counts** on tracks (YouTube-style "1.2k plays") — denormalised `play_count` on tracks.
 - **Admin dashboard:** monthly active listeners, total users, **listening hours per user per month** (sum of `seconds_played`), top tracks, storage by user (§7). One internal page querying rollup tables.
 - **Retention:** raw `play_events` pruned after 90 days; monthly rollups (per-track, per-user, per-day aggregates) kept forever — keeps the Neon free tier healthy indefinitely.
 
@@ -211,7 +209,7 @@ Own the data in Postgres — no external analytics vendor needed (free, private,
 
 **Phase 0 — de-risk (S):** background-playback spike on real Android + iPhone (§5); codec spot-check (m4a/ogg/flac in Safari + Chrome); provision Vercel/Neon/R2/Resend on free tiers; pick domain (can defer).
 
-**Phase 1 — MVP (M):** Next.js + PWA shell (manifest, icons, Workbox SW); auth with permanent sessions; **SoundCloud import (§6) + browse UI** (user pages, albums, tracks, recents); player (single audio element, queue, Media Session, next-track preload); playback cache + Settings; anonymous listening; likes + playlists; play counting with public counts; basic search; simple shuffle-all.
+**Phase 1 — MVP (M):** Next.js + PWA shell (manifest, icons, Workbox SW); auth with permanent sessions; **library import (§6) + browse UI** (user pages, albums, tracks, recents); player (single audio element, queue, Media Session, next-track preload); playback cache + Settings; anonymous listening; likes + playlists; play counting with public counts; basic search; simple shuffle-all.
 
 **Phase 2 — community features (M):** in-app upload (presigned, all formats, color-picker artwork); Turnstile + rate limits; moderation email + admin page (unpublish/delete, storage by user, stats dashboard incl. listening hours); pin-for-offline + "On device" screen; weighted shuffle; trigram search polish; iOS install sheet.
 
@@ -242,7 +240,7 @@ Realistic total: **under $2/month** with a 20 GB library and thousands of listen
 | iOS background playback flaky | Phase 0 spike; Media Session + preload from day 1; accepted as best-effort (decision #9) |
 | Cache eviction (esp. iOS) | `storage.persist()`, conservative caps, install sheet, pinned content re-downloadable |
 | Upload abuse / surprise R2 bill | No quota per decision, but: storage-by-user admin table + R2 billing alert + review email per upload |
-| SoundCloud transcode-only quality (160k AAC) | Acceptable for streaming; if originals exist, hybrid import by SC id (§18) |
+| Source transcode-only quality (160k AAC) | Acceptable for streaming; if originals exist, hybrid import matched by stored source id |
 | Neon free tier fill-up from play events | 90-day raw prune + monthly rollups (§13) |
 | Losing data | R2 versioning or periodic `rclone` to B2/local; weekly `pg_dump` to R2 via Vercel cron |
 | Vendor free-tier blips | Accepted (decision #17); PWA keeps playing from cache during downtime; writes queue |
@@ -271,28 +269,10 @@ Realistic total: **under $2/month** with a 20 GB library and thousands of listen
 17. Uptime: "mostly available" is fine; offline listening must survive server downtime (it does, §2)
 18. Backups as proposed (weekly pg dumps, R2 sync)
 19. Budget: not strictly $0, avoid $100s/mo
-20. Analytics: users, listening hours/user/month, per-track play counts — public play counts on tracks (SC/YouTube-style)
+20. Analytics: users, listening hours/user/month, per-track play counts — public play counts on tracks (YouTube-style)
 
 Earlier decisions still standing: R2 for storage (zero egress), albums-as-playlists, no year metadata, publish-then-review moderation with owner email, no per-user quotas, no virus scanning (validated uploads + review email instead).
 
 Amended 2026-11-11 (later in the day): "user == artist" relaxed — users may set a separate **artist name** (nullable `users.artist_name`, displayed via `coalesce(artist_name, display_name)` on tracks/albums/lock screen/search). Defaults to their own name, so behavior is unchanged unless set.
 
 ---
-
-## 18. Remaining open questions
-
-1. **Do the original files still exist** (computer, backups, voice recorders)? They beat 160k transcodes; a hybrid import can mix both, matched by SoundCloud id.
-2. **Carry over existing SoundCloud artwork** for the 1,053 back-catalog tracks? (Recommended: yes — you already chose it once.)
-3. **Album structure for the back-catalog:** import all 1,053 flat, or auto-group (e.g., by upload year / theme) as a starting point you can re-arrange later?
-4. **Domain:** check availability of `lifestream` variants when ready to launch (`.fm`/`.music`/`.church` are fun but pricier; `.com`/`.app` are cheap). Not blocking.
-5. **Support email address** to list in the footer — once the domain exists, Cloudflare Email Routing can forward `hello@lifestream.…` to your inbox for free.
-
----
-
-## 19. Next steps
-
-1. Answer §18 (especially 1–3).
-2. `git init`, scaffold Next.js app, provision Neon + R2 + Resend.
-3. Phase 0 spike (background playback on real phones; codec spot-check).
-4. SoundCloud bulk download (one-time ~2–3 h background run) + import script.
-5. Build Phase 1.

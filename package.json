@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
-    "import": "node scripts/import-soundcloud.mjs",
+    "import": "node scripts/import-library.mjs",
     "progress": "node scripts/download-progress.mjs",
     "icons": "node scripts/gen-icons.mjs"
   },
