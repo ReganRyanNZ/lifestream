@@ -75,7 +75,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
+        <header className="sticky top-0 z-40 border-b border-border bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur">
           <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
             <Logo />
             <SearchBox className="min-w-0 w-full flex-1 sm:ml-auto sm:w-64 sm:flex-none" />
@@ -100,9 +100,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6">{children}</main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6">
+          {children}
+        </main>
 
-        <footer className="border-t border-border py-6 pb-28 text-center text-xs text-muted">
+        <footer className="border-t border-border py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] text-center text-xs text-muted">
           <Link href="/about" className="hover:underline">
             about
           </Link>{" "}

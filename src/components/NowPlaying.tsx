@@ -156,7 +156,7 @@ export function NowPlaying() {
       <div className="mx-auto flex h-full w-full max-w-6xl flex-col overflow-y-auto px-3 sm:px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,25rem)] lg:grid-rows-[minmax(0,1fr)] lg:gap-8 lg:overflow-hidden lg:px-4">
         {/* left: the current track (drag/swipe down on it to close) */}
         <div
-          className="flex flex-col gap-4 pb-6 pt-2 touch-none lg:justify-center lg:overflow-y-auto lg:py-6"
+          className="flex flex-col gap-4 pb-6 pt-2 touch-none max-lg:pt-[max(0.5rem,env(safe-area-inset-top))] lg:justify-center lg:overflow-y-auto lg:py-6"
           onPointerDown={(e) => {
             if (!e.isPrimary) return;
             const start = { startY: e.clientY, y: 0 };

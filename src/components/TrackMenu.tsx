@@ -225,7 +225,7 @@ export function TrackMenu({
       )}
 
       {notice && (
-        <div className="pointer-events-none fixed left-1/2 top-4 z-[70] -translate-x-1/2">
+        <div className="pointer-events-none fixed left-1/2 top-[max(1rem,env(safe-area-inset-top))] z-[70] -translate-x-1/2">
           <div className="card px-3 py-1.5 text-xs">{notice}</div>
         </div>
       )}
