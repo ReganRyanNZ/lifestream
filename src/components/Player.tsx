@@ -130,6 +130,14 @@ export function Player() {
     set("seekto", (d) => {
       if (typeof d?.seekTime === "number") usePlayer.getState().seek(d.seekTime);
     });
+    // explicit null-clear, not just omission — if the app resumed from memory
+    // with handlers from an older bundle, this re-registers them as unset
+    try {
+      ms.setActionHandler("seekbackward", null);
+      ms.setActionHandler("seekforward", null);
+    } catch {
+      /* action unsupported */
+    }
   }, []);
 
   // metadata + lock-screen artwork per track
