@@ -15,10 +15,12 @@ export function TrackMenu({
   direction = "up",
 }: {
   track: TrackDTO;
-  /** Which way the dropdown opens — up from the bar, down inside the overlay. */
+  /** Which way the dropdown opens when there's room — the menu flips itself
+   *  up automatically if the viewport doesn't fit it below. */
   direction?: "up" | "down";
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(direction === "up");
   const [showPlaylists, setShowPlaylists] = useState(false);
   const [playlists, setPlaylists] = useState<{ id: string; title: string }[]>([]);
   const [newTitle, setNewTitle] = useState("");
@@ -40,7 +42,10 @@ export function TrackMenu({
       .catch(() => {});
   }, [track.id]);
 
-  function openMenu() {
+  function openMenu(e: React.MouseEvent) {
+    // flip up when there isn't room below for the ~320px menu
+    const btn = e.currentTarget as HTMLElement;
+    setOpenUp(window.innerHeight - btn.getBoundingClientRect().bottom < 340);
     setMenuOpen(true);
     fetch("/api/playlists")
       .then((r) => (r.ok ? r.json() : null))
@@ -94,7 +99,7 @@ export function TrackMenu({
   return (
     <div className="relative">
       <button
-        onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
+        onClick={(e) => (menuOpen ? setMenuOpen(false) : openMenu(e))}
         aria-label="More actions"
         aria-haspopup="menu"
         aria-expanded={menuOpen}
@@ -110,7 +115,7 @@ export function TrackMenu({
           <div
             role="menu"
             className={`card absolute z-50 flex w-64 flex-col gap-0.5 p-1.5 text-sm ${
-              direction === "up" ? "bottom-full right-0 mb-2" : "left-0 top-full mt-2"
+              openUp ? "bottom-full right-0 mb-2" : "left-0 top-full mt-2"
             }`}
           >
             {!showPlaylists ? (

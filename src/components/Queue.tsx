@@ -101,6 +101,7 @@ export const QueuePanel = memo(function QueuePanel() {
   const queue = usePlayer((s) => s.queue);
   const index = usePlayer((s) => s.index);
   const contextKind = usePlayer((s) => s.contextKind);
+  const [albumBusy, setAlbumBusy] = useState(false);
   const listRef = useRef<HTMLOListElement | null>(null);
   // drag state: k = upcoming index; pos = insert position among the others
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -152,6 +153,28 @@ export const QueuePanel = memo(function QueuePanel() {
   const current = queue[index];
   if (!current) return null;
 
+  /** Swap what comes after the current song: album ↔ radio mix. Playback
+   *  of the current song is never interrupted — only the queue behind it. */
+  async function switchContext() {
+    const s = usePlayer.getState();
+    if (s.contextKind === "album") {
+      s.regenerateStation();
+      return;
+    }
+    const cur = s.queue[s.index];
+    if (!cur?.albumId || albumBusy) return;
+    setAlbumBusy(true);
+    try {
+      const j = (await fetch(`/api/albums/${cur.albumId}/tracks`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)) as { tracks?: TrackDTO[] } | null;
+      // switchToQueue keeps the current song playing; only what follows changes
+      if (j?.tracks?.length) s.switchToQueue(j.tracks, "album");
+    } finally {
+      setAlbumBusy(false);
+    }
+  }
+
   const upcoming = queue.slice(index + 1, index + 1 + MAX_ROWS);
   const more = queue.length - (index + 1 + upcoming.length);
 
@@ -195,6 +218,34 @@ export const QueuePanel = memo(function QueuePanel() {
           <span className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted">
             {CONTEXT_LABEL[contextKind]}
           </span>
+        )}
+        {/* discreet context swap: what follows the current song, without
+            interrupting it */}
+        {contextKind === "album" ? (
+          <button
+            onClick={() => usePlayer.getState().regenerateStation()}
+            title="Switch to a radio mix of all songs"
+            aria-label="Switch to a radio mix of all songs"
+            className="flex h-6 w-6 items-center justify-center rounded-full text-muted transition hover:bg-surface-2 hover:text-foreground"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM17.6 3.3l1.4 1.4-3.5 3.5-1.4-1.4 3.5-3.5zm1.1 16-1.4 1.4-3.5-3.5 1.4-1.4 3.5 3.5z" />
+            </svg>
+          </button>
+        ) : (
+          current.albumId && (
+            <button
+              onClick={switchContext}
+              disabled={albumBusy}
+              title="Switch to this song's album, in order"
+              aria-label="Switch to this song's album, in order"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-muted transition hover:bg-surface-2 hover:text-foreground disabled:opacity-50"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
+              </svg>
+            </button>
+          )
         )}
       </div>
       <ol className="flex select-none flex-col gap-0.5" ref={listRef}>
