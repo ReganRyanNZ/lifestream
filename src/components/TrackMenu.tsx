@@ -95,7 +95,7 @@ export function TrackMenu({
   /** thumbs-down cycle: none → song → song+album → none */
   async function cycleThumb() {
     const { songMuted, albumMuted } = muteState;
-    setMenuOpen(false);
+    // stays open — the state change is visible in the icon itself
     if (!songMuted && !albumMuted) {
       await postPref("mute");
       setMuteState({ songMuted: true, albumMuted: false });
@@ -229,37 +229,36 @@ export function TrackMenu({
                   aria-label={thumbLabel}
                   title={thumbLabel}
                   onClick={cycleThumb}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-surface-2 ${
+                  className={`flex h-11 w-11 items-center justify-center rounded-lg transition hover:bg-surface-2 ${
                     muteState.albumMuted || muteState.songMuted
-                      ? "text-rose-400"
+                      ? "text-accent"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
-                  {muteState.albumMuted ? (
-                    // double thumbs
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                      <g opacity="0.55" transform="translate(-0.5 3) scale(0.75)">
-                        <path d="M16 3H7c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2z" />
-                        <path d="M23 3h-4v12h4V3z" />
-                      </g>
-                      <g transform="translate(6 0.5) scale(0.8)">
-                        <path d="M16 3H7c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2z" />
-                        <path d="M23 3h-4v12h4V3z" />
-                      </g>
-                    </svg>
-                  ) : (
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill={muteState.songMuted ? "currentColor" : "none"}
-                      stroke="currentColor"
-                      strokeWidth={muteState.songMuted ? 0 : 1.8}
-                      aria-hidden
-                    >
-                      <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z" />
-                    </svg>
-                  )}
+                  {/* always an outline thumb; a second, offset outline
+                      appears when the album is blocked too */}
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path
+                      d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"
+                      transform={muteState.albumMuted ? "translate(-0.5 3) scale(0.75)" : undefined}
+                      opacity={muteState.albumMuted ? 0.55 : 1}
+                    />
+                    {muteState.albumMuted && (
+                      <path
+                        d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"
+                        transform="translate(6 0.5) scale(0.8)"
+                      />
+                    )}
+                  </svg>
                 </button>
               </div>
             ) : (
