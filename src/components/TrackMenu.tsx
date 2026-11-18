@@ -55,6 +55,7 @@ export function TrackMenu({
     const r = btn.getBoundingClientRect();
     setOpenUp(window.innerHeight - r.bottom < 340);
     setAnchorLeft(r.left < 284);
+    setShowPlaylists(false); // always reopen on the main toolbar
     setMenuOpen(true);
     fetch("/api/playlists")
       .then((r) => (r.ok ? r.json() : null))
