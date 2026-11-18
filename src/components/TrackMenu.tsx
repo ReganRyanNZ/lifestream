@@ -97,22 +97,25 @@ export function TrackMenu({
   }
 
   /** thumbs-down cycle: none → song → song+album → none */
-  async function cycleThumb() {
+  function cycleThumb() {
     const { songMuted, albumMuted } = muteState;
-    // stays open — the state change is visible in the icon itself
+    // stays open; optimistic — icon and toast update instantly, the server
+    // syncs in the background (state re-syncs from the API on the next track)
+    let prefs: ("mute" | "unmute" | "mute-album" | "unmute-album")[];
     if (!songMuted && !albumMuted) {
-      await postPref("mute");
       setMuteState({ songMuted: true, albumMuted: false });
       notify("Won't autoplay this song");
+      prefs = ["mute"];
     } else if (songMuted && !albumMuted) {
-      await postPref("mute-album");
       setMuteState({ songMuted: true, albumMuted: true });
       notify("Won't autoplay this album");
+      prefs = ["mute-album"];
     } else {
-      await Promise.all([postPref("unmute"), postPref("unmute-album")]);
       setMuteState({ songMuted: false, albumMuted: false });
       notify("Autoplay restored");
+      prefs = ["unmute", "unmute-album"];
     }
+    for (const p of prefs) void postPref(p);
     // honor it immediately if we're in a radio mix
     if (usePlayer.getState().contextKind === "station") {
       usePlayer.getState().regenerateStation();
