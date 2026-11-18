@@ -62,8 +62,8 @@ export function LikeButton({
       } ${compact ? "p-1.5" : "btn btn-ghost"}`}
     >
       <svg
-        width={compact ? 17 : 16}
-        height={compact ? 17 : 16}
+        width={compact ? 24 : 16}
+        height={compact ? 24 : 16}
         viewBox="0 0 24 24"
         fill={liked ? "currentColor" : "none"}
         stroke="currentColor"
