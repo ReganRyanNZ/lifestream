@@ -21,6 +21,9 @@ export function TrackMenu({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openUp, setOpenUp] = useState(direction === "up");
+  // anchor left (menu grows rightward) when the button sits near the left
+  // edge, so the w-64 menu stays on screen either way
+  const [anchorLeft, setAnchorLeft] = useState(false);
   const [showPlaylists, setShowPlaylists] = useState(false);
   const [playlists, setPlaylists] = useState<{ id: string; title: string }[]>([]);
   const [newTitle, setNewTitle] = useState("");
@@ -43,9 +46,13 @@ export function TrackMenu({
   }, [track.id]);
 
   function openMenu(e: React.MouseEvent) {
-    // flip up when there isn't room below for the ~320px menu
+    // measure both axes: flip up when there isn't ~340px below, and anchor
+    // left (grow rightward) when there isn't room for the 256px menu to the
+    // left of the button
     const btn = e.currentTarget as HTMLElement;
-    setOpenUp(window.innerHeight - btn.getBoundingClientRect().bottom < 340);
+    const r = btn.getBoundingClientRect();
+    setOpenUp(window.innerHeight - r.bottom < 340);
+    setAnchorLeft(r.left < 284);
     setMenuOpen(true);
     fetch("/api/playlists")
       .then((r) => (r.ok ? r.json() : null))
@@ -115,7 +122,7 @@ export function TrackMenu({
           <div
             role="menu"
             className={`card absolute z-50 flex w-64 flex-col gap-0.5 p-1.5 text-sm ${
-              openUp ? "bottom-full right-0 mb-2" : "left-0 top-full mt-2"
+              `${openUp ? "bottom-full mb-2" : "top-full mt-2"} ${anchorLeft ? "left-0" : "right-0"}`
             }`}
           >
             {!showPlaylists ? (
