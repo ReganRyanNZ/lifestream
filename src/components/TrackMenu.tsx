@@ -76,7 +76,11 @@ export function TrackMenu({
   async function share() {
     setMenuOpen(false);
     const url = `${location.origin}/track/${track.id}`;
-    if (navigator.share) {
+    // the OS share sheet only on touch-primary devices (phones/tablets);
+    // desktop browsers have navigator.share too, but there a quick clipboard
+    // copy is what people actually want
+    const touchDevice = window.matchMedia?.("(pointer: coarse)").matches;
+    if (touchDevice && navigator.share) {
       try {
         await navigator.share({ title: track.title, url });
       } catch {
