@@ -7,6 +7,7 @@ import { NowPlaying } from "@/components/NowPlaying";
 import { SWRegister } from "@/components/SWRegister";
 import { SearchBox } from "@/components/SearchBox";
 import { getCurrentUser } from "@/lib/auth";
+import { FooterLink } from "@/components/FooterLink";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -110,9 +111,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </main>
 
         <footer className="border-t border-border py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] text-center text-xs text-muted">
-          <Link href="/about" className="hover:underline">
-            about
-          </Link>
+          <FooterLink />
         </footer>
 
         <Player />
