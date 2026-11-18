@@ -182,7 +182,14 @@ export function TrackMenu({
                     if (s.repeatOne) {
                       s.setRepeatOne(false);
                       if (s.contextKind === "album") {
-                        // full cycle: queue → album → repeat → back to the mix
+                        // full cycle: queue → album → repeat → back to the mix.
+                        // Flip to station optimistically so the icon doesn't
+                        // linger on "album" while the fresh mix loads.
+                        usePlayer.setState({
+                          contextKind: "station",
+                          queue: s.queue.slice(s.index),
+                          index: 0,
+                        });
                         s.regenerateStation();
                         notify("Playing radio mix");
                       } else {
