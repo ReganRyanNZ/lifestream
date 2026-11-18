@@ -131,7 +131,7 @@ export function TrackMenu({
         : contextKind === "station"
           ? "radio mix"
           : "queue";
-  const modeIconSize = 24;
+  const modeIconSize = 26;
   // one repeat icon for all modes: grey = radio/queue, accent = album,
   // accent + "1" = repeating this song
   const modeIcon = (
@@ -153,7 +153,7 @@ export function TrackMenu({
         aria-expanded={menuOpen}
         className="btn-icon"
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
         </svg>
       </button>
@@ -204,7 +204,7 @@ export function TrackMenu({
                   onClick={share}
                   className="flex h-11 w-11 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                     <path d="M12 2.6 16.5 7l-1.4 1.4L13 6.3V15h-2V6.3L8.9 8.4 7.5 7 12 2.6z" />
                     <path d="M6 11h2v8h8v-8h2v8c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2v-8z" />
                   </svg>
@@ -218,7 +218,7 @@ export function TrackMenu({
                   onClick={() => setShowPlaylists(true)}
                   className="flex h-11 w-11 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                     <path d="M3 4h12v2H3V4zm0 5h12v2H3V9zm0 5h7v2H3v-2zm13-7h2v14h-2V7zm-4 6h10v2H12z" />
                   </svg>
                 </button>
@@ -238,8 +238,8 @@ export function TrackMenu({
                   {/* always an outline thumb; a second, offset outline
                       appears when the album is blocked too */}
                   <svg
-                    width="24"
-                    height="24"
+                    width={muteState.albumMuted ? 32 : 26}
+                    height={muteState.albumMuted ? 32 : 26}
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
