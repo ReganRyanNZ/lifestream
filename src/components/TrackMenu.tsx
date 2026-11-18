@@ -29,6 +29,8 @@ export function TrackMenu({
   const [newTitle, setNewTitle] = useState("");
   const [muteState, setMuteState] = useState({ songMuted: false, albumMuted: false });
   const [notice, setNotice] = useState<string | null>(null);
+  const contextKind = usePlayer((s) => s.contextKind);
+  const repeatOne = usePlayer((s) => s.repeatOne);
   const notify = (msg: string) => {
     setNotice(msg);
     setTimeout(() => setNotice((n) => (n === msg ? null : n)), 2600);
@@ -127,6 +129,63 @@ export function TrackMenu({
           >
             {!showPlaylists ? (
               <>
+                <span className="px-2.5 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-muted">
+                  Plays next
+                </span>
+                {(
+                  [
+                    {
+                      key: "radio",
+                      label: "Radio mix",
+                      active: !repeatOne && contextKind === "station",
+                      disabled: false,
+                      go: () => {
+                        usePlayer.getState().setRepeatOne(false);
+                        usePlayer.getState().regenerateStation();
+                      },
+                    },
+                    {
+                      key: "album",
+                      label: "This album",
+                      active: !repeatOne && contextKind === "album",
+                      disabled: !track.albumId,
+                      go: async () => {
+                        usePlayer.getState().setRepeatOne(false);
+                        await usePlayer.getState().switchToAlbum();
+                      },
+                    },
+                    {
+                      key: "repeat",
+                      label: "Repeat this song",
+                      active: repeatOne,
+                      disabled: false,
+                      go: () => usePlayer.getState().setRepeatOne(true),
+                    },
+                  ] as const
+                ).map((item) => (
+                  <button
+                    key={item.key}
+                    role="menuitemradio"
+                    aria-checked={item.active}
+                    disabled={item.disabled}
+                    onClick={() => {
+                      if (item.active) return;
+                      setMenuOpen(false);
+                      void item.go();
+                    }}
+                    className={`flex items-center rounded-md px-2.5 py-1.5 text-left hover:bg-surface-2 ${
+                      item.disabled ? "cursor-not-allowed opacity-40" : ""
+                    }`}
+                  >
+                    <span
+                      className={`inline-block w-4 shrink-0 text-accent ${item.active ? "" : "invisible"}`}
+                      aria-hidden
+                    >
+                      ●
+                    </span>
+                    {item.label}
+                  </button>
+                ))}
                 <button
                   role="menuitem"
                   onClick={share}

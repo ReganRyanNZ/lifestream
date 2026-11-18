@@ -27,6 +27,11 @@ type PlayerState = {
   switchToQueue: (tracks: TrackDTO[], kind: PlayContextKind) => void;
   /** Rebuild the queue behind the current song as a fresh radio mix. */
   regenerateStation: () => void;
+  /** Loop the current song when it ends (manual skips still advance). */
+  repeatOne: boolean;
+  setRepeatOne: (on: boolean) => void;
+  /** Swap the queue behind the current song to its album, in order. */
+  switchToAlbum: () => Promise<void>;
   /** Move a queued track to a new position (drag-to-reorder in Up next). */
   moveQueueItem: (from: number, to: number) => void;
   toggle: () => void;
@@ -170,6 +175,33 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     });
   },
 
+  repeatOne: (() => {
+    try {
+      return typeof window !== "undefined" && localStorage.getItem("ls-repeat-one") === "1";
+    } catch {
+      return false;
+    }
+  })(),
+
+  setRepeatOne: (on) => {
+    set({ repeatOne: on });
+    try {
+      localStorage.setItem("ls-repeat-one", on ? "1" : "0");
+    } catch {
+      /* storage unavailable — session-only */
+    }
+  },
+
+  switchToAlbum: async () => {
+    const cur = get().queue[get().index];
+    if (!cur?.albumId) return;
+    const j = (await fetch(`/api/albums/${cur.albumId}/tracks`)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)) as { tracks?: TrackDTO[] } | null;
+    // switchToQueue keeps the current song playing; only what follows changes
+    if (j?.tracks?.length) get().switchToQueue(j.tracks, "album");
+  },
+
   moveQueueItem: (from, to) => {
     const { queue, index } = get();
     if (from === to || from <= index || to <= index) return; // current song stays put
@@ -239,7 +271,15 @@ export function bindAudio() {
 
   audio.addEventListener("play", () => usePlayer.setState({ playing: true }));
   audio.addEventListener("pause", () => usePlayer.setState({ playing: false }));
-  audio.addEventListener("ended", () => usePlayer.getState().next());
+  audio.addEventListener("ended", () => {
+    const s = usePlayer.getState();
+    if (s.repeatOne) {
+      s.seek(0);
+      audio?.play().catch(() => {});
+    } else {
+      s.next();
+    }
+  });
   audio.addEventListener("playing", () => {
     consecutiveErrors = 0;
   });

@@ -101,6 +101,7 @@ export const QueuePanel = memo(function QueuePanel() {
   const queue = usePlayer((s) => s.queue);
   const index = usePlayer((s) => s.index);
   const contextKind = usePlayer((s) => s.contextKind);
+  const repeatOne = usePlayer((s) => s.repeatOne);
   const [albumBusy, setAlbumBusy] = useState(false);
   const listRef = useRef<HTMLOListElement | null>(null);
   // drag state: k = upcoming index; pos = insert position among the others
@@ -161,15 +162,10 @@ export const QueuePanel = memo(function QueuePanel() {
       s.regenerateStation();
       return;
     }
-    const cur = s.queue[s.index];
-    if (!cur?.albumId || albumBusy) return;
+    if (!current.albumId || albumBusy) return;
     setAlbumBusy(true);
     try {
-      const j = (await fetch(`/api/albums/${cur.albumId}/tracks`)
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null)) as { tracks?: TrackDTO[] } | null;
-      // switchToQueue keeps the current song playing; only what follows changes
-      if (j?.tracks?.length) s.switchToQueue(j.tracks, "album");
+      await s.switchToAlbum();
     } finally {
       setAlbumBusy(false);
     }
@@ -214,7 +210,12 @@ export const QueuePanel = memo(function QueuePanel() {
     <section>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="section-title !mb-0">Up next</h2>
-        {contextKind && contextKind !== "list" && (
+        {repeatOne && (
+          <span className="rounded-full border border-border px-2.5 py-0.5 text-xs text-accent">
+            Repeat · this song
+          </span>
+        )}
+        {!repeatOne && contextKind && contextKind !== "list" && (
           <span className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted">
             {CONTEXT_LABEL[contextKind]}
           </span>
