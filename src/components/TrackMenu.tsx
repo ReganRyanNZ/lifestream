@@ -149,7 +149,7 @@ export function TrackMenu({
   );
 
   return (
-    <div className="relative">
+    <div className="relative flex">
       <button
         onClick={(e) => (menuOpen ? setMenuOpen(false) : openMenu(e))}
         aria-label="More actions"
@@ -184,7 +184,7 @@ export function TrackMenu({
                       if (s.contextKind === "album") {
                         // full cycle: queue → album → repeat → back to the mix
                         s.regenerateStation();
-                        notify("Back to the radio mix");
+                        notify("Playing radio mix");
                       } else {
                         notify("Resuming the queue");
                       }
