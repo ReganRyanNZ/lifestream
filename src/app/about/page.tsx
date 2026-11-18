@@ -20,17 +20,14 @@ export default function AboutPage() {
       </div>
 
       <div className="flex flex-col gap-3 text-sm text-muted">
-        <h2 className="text-base font-semibold text-foreground">Legal rights</h2>
         <p>
-          <strong className="font-semibold text-foreground/90">
-            If you are the creator of any of this music?
-          </strong>{" "}
-          You retain all rights and ownership. As a brother in the Body of Christ, the creator of
-          Life Stream would beg you to permit your songs to continue to be shared with others
-          through this service. These songs have rendered help to many believers, and it would
-          be an honor to continue this. Please also note that no money is being earned from
-          this site, and if anyone asks about donations we would direct them to the original
-          producers of the music.
+          <strong className="font-semibold text-foreground/90">Legal rights:</strong> if you are
+          the creator of any of this music, you retain all rights and ownership. As a brother in
+          the Body of Christ, the creator of Life Stream would beg you to permit your songs to
+          continue to be shared with others through this service. These songs have rendered help
+          to many believers, and it would be an honor to continue this. Please also note that no
+          money is being earned from this site, and if anyone asks about donations we would
+          direct them to the original producers of the music.
         </p>
       </div>
 
