@@ -17,13 +17,20 @@ export default function AboutPage() {
           <li>To separate these songs from all that the world offers on other platforms.</li>
           <li>To provide a service without advertising or subscription fees.</li>
         </ul>
+      </div>
+
+      <div className="flex flex-col gap-3 text-sm text-muted">
+        <h2 className="text-base font-semibold text-foreground">Legal rights</h2>
         <p>
-          If you are the creator of any of this music, you retain all rights and ownership. As a
-          brother in the Body of Christ, the creator of Life Stream would beg you to permit your
-          songs to continue to be shared with others through this service. These songs have
-          rendered help to many believers, and it would be an honor to continue this. Please also
-          note that no money is being earned from this site, and if anyone asks about donations
-          we would direct them to the original producers of the music.
+          <strong className="font-semibold text-foreground/90">
+            If you are the creator of any of this music?
+          </strong>{" "}
+          You retain all rights and ownership. As a brother in the Body of Christ, the creator of
+          Life Stream would beg you to permit your songs to continue to be shared with others
+          through this service. These songs have rendered help to many believers, and it would
+          be an honor to continue this. Please also note that no money is being earned from
+          this site, and if anyone asks about donations we would direct them to the original
+          producers of the music.
         </p>
       </div>
 
@@ -39,6 +46,8 @@ export default function AboutPage() {
           Questions or requests? Email{" "}
           <a
             href="mailto:lifestreambrothers@gmail.com"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-foreground/90 underline decoration-border underline-offset-2 hover:decoration-foreground"
           >
             lifestreambrothers@gmail.com
