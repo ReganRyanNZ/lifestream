@@ -130,7 +130,7 @@ export function TrackMenu({
         : contextKind === "station"
           ? "radio mix"
           : "queue";
-  const modeIconSize = 16;
+  const modeIconSize = 20;
   const modeIcon = repeatOne ? (
     <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z" />
@@ -162,7 +162,7 @@ export function TrackMenu({
         aria-expanded={menuOpen}
         className="btn-icon"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
         </svg>
       </button>
@@ -171,7 +171,7 @@ export function TrackMenu({
           <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} aria-hidden />
           <div
             role="menu"
-            className={`card absolute z-50 flex w-64 flex-col gap-0.5 p-1.5 text-sm ${
+            className={`card absolute z-50 flex w-fit flex-col gap-0.5 p-2 text-sm ${
               `${openUp ? "bottom-full mb-2" : "top-full mt-2"} ${anchorLeft ? "left-0" : "right-0"}`
             }`}
           >
@@ -209,9 +209,9 @@ export function TrackMenu({
                   aria-label="Share"
                   title="Share"
                   onClick={share}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                     <path d="M12 2.6 16.5 7l-1.4 1.4L13 6.3V15h-2V6.3L8.9 8.4 7.5 7 12 2.6z" />
                     <path d="M6 11h2v8h8v-8h2v8c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2v-8z" />
                   </svg>
@@ -223,9 +223,9 @@ export function TrackMenu({
                   aria-label="Add to playlist"
                   title="Add to playlist"
                   onClick={() => setShowPlaylists(true)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                     <path d="M3 6h12v2H3V6zm0 4h12v2H3v-2zm0 4h7v2H3v-2zm14-6h2v4h4v2h-4v4h-2v-4h-4v-2h4V8z" />
                   </svg>
                 </button>
@@ -244,7 +244,7 @@ export function TrackMenu({
                 >
                   {muteState.albumMuted ? (
                     // double thumbs
-                    <svg width="20" height="16" viewBox="0 0 28 20" fill="currentColor" aria-hidden>
+                    <svg width="26" height="20" viewBox="0 0 28 20" fill="currentColor" aria-hidden>
                       <g opacity="0.55" transform="translate(-4 0)">
                         <path d="M16 3H7c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2z" />
                         <path d="M23 3h-4v12h4V3z" />
@@ -270,7 +270,7 @@ export function TrackMenu({
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col">
+              <div className="flex w-60 flex-col">
                 <span className="px-2.5 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-muted">
                   Add to playlist
                 </span>
