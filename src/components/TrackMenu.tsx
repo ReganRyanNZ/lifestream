@@ -239,6 +239,19 @@ export function TrackMenu({
                     )}
                   </svg>
                 </button>
+                {/* add to playlist */}
+                <button
+                  role="menuitem"
+                  aria-label="Add to playlist"
+                  title="Add to playlist"
+                  onClick={() => setShowPlaylists(true)}
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
+                >
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M3 4h12v2H3V4zm0 5h12v2H3V9zm0 5h7v2H3v-2zm13-7h2v14h-2V7zm-4 6h10v2H12z" />
+                  </svg>
+                </button>
+
                 {/* share */}
                 <button
                   role="menuitem"
@@ -250,19 +263,6 @@ export function TrackMenu({
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                     <path d="M12 2.6 16.5 7l-1.4 1.4L13 6.3V15h-2V6.3L8.9 8.4 7.5 7 12 2.6z" />
                     <path d="M6 11h2v8h8v-8h2v8c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2v-8z" />
-                  </svg>
-                </button>
-
-                {/* add to playlist */}
-                <button
-                  role="menuitem"
-                  aria-label="Add to playlist"
-                  title="Add to playlist"
-                  onClick={() => setShowPlaylists(true)}
-                  className="flex h-11 w-11 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
-                >
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                    <path d="M3 4h12v2H3V4zm0 5h12v2H3V9zm0 5h7v2H3v-2zm13-7h2v14h-2V7zm-4 6h10v2H12z" />
                   </svg>
                 </button>
 
