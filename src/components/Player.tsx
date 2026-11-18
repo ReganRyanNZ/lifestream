@@ -233,7 +233,7 @@ export function Player() {
         aria-expanded={false}
         className="absolute -top-4 left-1/2 flex h-8 w-24 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-surface/95 text-muted shadow-md backdrop-blur transition hover:text-foreground"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z" />
         </svg>
       </button>
@@ -281,7 +281,7 @@ export function Player() {
             aria-label="Previous track"
             className="btn-icon !h-11 !w-11"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d="M6 5h2v14H6zM20 5v14l-11-7z" />
             </svg>
           </button>
@@ -290,14 +290,14 @@ export function Player() {
             aria-label={playing ? "Pause" : "Play"}
             className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-[#06121c] transition hover:brightness-110"
           >
-            {playing ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
+            {playing ? <PauseIcon size={26} /> : <PlayIcon size={26} />}
           </button>
           <button
             onClick={next}
             aria-label="Next track"
             className="btn-icon !h-11 !w-11"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d="M16 5h2v14h-2zM4 5l11 7-11 7z" />
             </svg>
           </button>
