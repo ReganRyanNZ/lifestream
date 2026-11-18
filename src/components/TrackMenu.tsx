@@ -217,8 +217,8 @@ export function TrackMenu({
                   {/* always an outline thumb; a second, offset outline
                       appears when the album is blocked too */}
                   <svg
-                    width={muteState.albumMuted ? 32 : 26}
-                    height={muteState.albumMuted ? 32 : 26}
+                    width={muteState.albumMuted ? 30 : 24}
+                    height={muteState.albumMuted ? 30 : 24}
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
