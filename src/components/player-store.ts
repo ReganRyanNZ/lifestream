@@ -269,8 +269,16 @@ export function bindAudio() {
 
   let consecutiveErrors = 0;
 
-  audio.addEventListener("play", () => usePlayer.setState({ playing: true }));
-  audio.addEventListener("pause", () => usePlayer.setState({ playing: false }));
+  audio.addEventListener("play", () => {
+    usePlayer.setState({ playing: true });
+    // playbackState marks the session as actively audible — this is what
+    // Android keys its ongoing-media-notification exemption off
+    if (navigator.mediaSession) navigator.mediaSession.playbackState = "playing";
+  });
+  audio.addEventListener("pause", () => {
+    usePlayer.setState({ playing: false });
+    if (navigator.mediaSession) navigator.mediaSession.playbackState = "paused";
+  });
   audio.addEventListener("ended", () => {
     const s = usePlayer.getState();
     if (s.repeatOne) {
@@ -302,6 +310,42 @@ export function bindAudio() {
   audio.addEventListener("loadedmetadata", () =>
     usePlayer.setState({ duration: audio.duration || 0 }),
   );
+
+  // ---- playback watchdog -------------------------------------------------
+  // Android (Doze, OEM battery managers) can stall background audio with no
+  // error event: the element claims to be playing but time freezes until the
+  // screen comes back on. Poll every 15s; if time is frozen while the element
+  // is supposed to be playing, nudge it — re-play first, reload the source
+  // (keeping position) if that doesn't take.
+  let lastTime = -1;
+  let frozenChecks = 0;
+  setInterval(() => {
+    if (!audio || audio.paused || audio.ended) {
+      frozenChecks = 0;
+      lastTime = -1;
+      return;
+    }
+    if (Math.abs(audio.currentTime - lastTime) < 0.1) {
+      frozenChecks++;
+      if (frozenChecks === 2) {
+        // stalled for ~30s — try a plain re-play (clears a wedged pipeline)
+        audio.play().catch(() => {});
+      } else if (frozenChecks >= 3) {
+        // still frozen — reload the source and resume from the same spot
+        const at = audio.currentTime;
+        const src = audio.src;
+        audio.src = src; // re-assigning triggers a reload of the same URL
+        audio.currentTime = at;
+        audio.play().catch(() => {
+          usePlayer.setState({ playing: false });
+        });
+        frozenChecks = 0;
+      }
+    } else {
+      frozenChecks = 0;
+    }
+    lastTime = audio.currentTime;
+  }, 15_000);
 }
 
 // ---------- auth probe (shared, cached for the page lifetime) ----------
