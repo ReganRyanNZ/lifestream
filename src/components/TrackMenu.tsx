@@ -91,19 +91,67 @@ export function TrackMenu({
     }
   }
 
-  async function toggleMute(kind: "mute" | "unmute" | "mute-album" | "unmute-album") {
-    const song = kind === "mute" || kind === "unmute";
-    const muting = kind.startsWith("mute");
+  /** thumbs-down cycle: none → song → song+album → none */
+  async function cycleThumb() {
+    const { songMuted, albumMuted } = muteState;
     setMenuOpen(false);
-    await postPref(kind);
-    if (song) setMuteState((s) => ({ ...s, songMuted: muting }));
-    else setMuteState((s) => ({ ...s, albumMuted: muting }));
-    notify(muting ? (song ? "Won't autoplay this song" : "Won't autoplay this album") : "Autoplay restored");
+    if (!songMuted && !albumMuted) {
+      await postPref("mute");
+      setMuteState({ songMuted: true, albumMuted: false });
+      notify("Won't autoplay this song");
+    } else if (songMuted && !albumMuted) {
+      await postPref("mute-album");
+      setMuteState({ songMuted: true, albumMuted: true });
+      notify("Won't autoplay this album");
+    } else {
+      await Promise.all([postPref("unmute"), postPref("unmute-album")]);
+      setMuteState({ songMuted: false, albumMuted: false });
+      notify("Autoplay restored");
+    }
     // honor it immediately if we're in a radio mix
     if (usePlayer.getState().contextKind === "station") {
       usePlayer.getState().regenerateStation();
     }
   }
+
+  const thumbLabel = muteState.albumMuted
+    ? "Not autoplaying this album — tap to restore"
+    : muteState.songMuted
+      ? "Not autoplaying this song — tap to also block the album"
+      : "Don't autoplay this song";
+
+  // plays-next mode shown by the first button
+  const modeLabel = repeatOne
+    ? "repeat this song"
+    : contextKind === "album"
+      ? "this album"
+      : contextKind === "playlist"
+        ? "playlist"
+        : contextKind === "station"
+          ? "radio mix"
+          : "queue";
+  const modeIconSize = 16;
+  const modeIcon = repeatOne ? (
+    <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z" />
+    </svg>
+  ) : contextKind === "album" ? (
+    <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
+    </svg>
+  ) : contextKind === "playlist" ? (
+    <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M3 6h13v2H3V6zm0 5h13v2H3v-2zm0 5h9v2H3v-2zm14 .5v-2.6l4.5 2.6-4.5 2.6v-2.6H14v-2.6h3z" />
+    </svg>
+  ) : contextKind === "station" ? (
+    <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM17.6 3.3l1.4 1.4-3.5 3.5-1.4-1.4 3.5-3.5zm1.1 16-1.4 1.4-3.5-3.5 1.4-1.4 3.5 3.5z" />
+    </svg>
+  ) : (
+    <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
+    </svg>
+  );
 
   return (
     <div className="relative">
@@ -128,85 +176,99 @@ export function TrackMenu({
             }`}
           >
             {!showPlaylists ? (
-              <>
-                <span className="px-2.5 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-muted">
-                  Plays next
-                </span>
-                {(
-                  [
-                    {
-                      key: "radio",
-                      label: "Radio mix",
-                      active: !repeatOne && contextKind === "station",
-                      disabled: false,
-                      go: () => {
-                        usePlayer.getState().setRepeatOne(false);
-                        usePlayer.getState().regenerateStation();
-                      },
-                    },
-                    {
-                      key: "album",
-                      label: "This album",
-                      active: !repeatOne && contextKind === "album",
-                      disabled: !track.albumId,
-                      go: async () => {
-                        usePlayer.getState().setRepeatOne(false);
-                        await usePlayer.getState().switchToAlbum();
-                      },
-                    },
-                    {
-                      key: "repeat",
-                      label: "Repeat this song",
-                      active: repeatOne,
-                      disabled: false,
-                      go: () => usePlayer.getState().setRepeatOne(true),
-                    },
-                  ] as const
-                ).map((item) => (
-                  <button
-                    key={item.key}
-                    role="menuitemradio"
-                    aria-checked={item.active}
-                    disabled={item.disabled}
-                    onClick={() => {
-                      if (item.active) return;
-                      setMenuOpen(false);
-                      void item.go();
-                    }}
-                    className={`flex items-center rounded-md px-2.5 py-1.5 text-left hover:bg-surface-2 ${
-                      item.disabled ? "cursor-not-allowed opacity-40" : ""
-                    }`}
-                  >
-                    <span
-                      className={`inline-block w-4 shrink-0 text-accent ${item.active ? "" : "invisible"}`}
+              <div className="flex items-center gap-1" role="toolbar" aria-label="Track actions">
+                {/* plays-next mode: cycles contextual queue → album → repeat */}
+                <button
+                  role="menuitem"
+                  aria-label={`Plays next: ${modeLabel}. Tap to change`}
+                  title={`Plays next: ${modeLabel} — tap to change`}
+                  onClick={() => {
+                    const s = usePlayer.getState();
+                    if (s.repeatOne) {
+                      s.setRepeatOne(false); // back to whatever queue is behind
+                      notify("Resuming the queue");
+                    } else if (s.contextKind === "album" || !track.albumId) {
+                      s.setRepeatOne(true);
+                      notify("Repeating this song");
+                    } else {
+                      s.setRepeatOne(false);
+                      void s.switchToAlbum();
+                      notify("Playing this album");
+                    }
+                  }}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-surface-2 ${
+                    repeatOne ? "text-accent" : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  {modeIcon}
+                </button>
+
+                {/* share */}
+                <button
+                  role="menuitem"
+                  aria-label="Share"
+                  title="Share"
+                  onClick={share}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M12 2.6 16.5 7l-1.4 1.4L13 6.3V15h-2V6.3L8.9 8.4 7.5 7 12 2.6z" />
+                    <path d="M6 11h2v8h8v-8h2v8c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2v-8z" />
+                  </svg>
+                </button>
+
+                {/* add to playlist */}
+                <button
+                  role="menuitem"
+                  aria-label="Add to playlist"
+                  title="Add to playlist"
+                  onClick={() => setShowPlaylists(true)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M3 6h12v2H3V6zm0 4h12v2H3v-2zm0 4h7v2H3v-2zm14-6h2v4h4v2h-4v4h-2v-4h-4v-2h4V8z" />
+                  </svg>
+                </button>
+
+                {/* thumbs down: none → song → song+album → none */}
+                <button
+                  role="menuitem"
+                  aria-label={thumbLabel}
+                  title={thumbLabel}
+                  onClick={cycleThumb}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-surface-2 ${
+                    muteState.albumMuted || muteState.songMuted
+                      ? "text-rose-400"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  {muteState.albumMuted ? (
+                    // double thumbs
+                    <svg width="20" height="16" viewBox="0 0 28 20" fill="currentColor" aria-hidden>
+                      <g opacity="0.55" transform="translate(-4 0)">
+                        <path d="M16 3H7c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2z" />
+                        <path d="M23 3h-4v12h4V3z" />
+                      </g>
+                      <g>
+                        <path d="M16 3H7c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2z" />
+                        <path d="M23 3h-4v12h4V3z" />
+                      </g>
+                    </svg>
+                  ) : (
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill={muteState.songMuted ? "currentColor" : "none"}
+                      stroke="currentColor"
+                      strokeWidth={muteState.songMuted ? 0 : 1.8}
                       aria-hidden
                     >
-                      ●
-                    </span>
-                    {item.label}
-                  </button>
-                ))}
-                <button
-                  role="menuitem"
-                  onClick={share}
-                  className="rounded-md px-2.5 py-2 text-left hover:bg-surface-2"
-                >
-                  <span className="inline-block w-4 text-muted" aria-hidden>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                      <path d="M18 16.08a2.9 2.9 0 0 0-1.86.68l-7.02-4.1c.05-.2.08-.41.08-.62s-.03-.42-.08-.62l6.94-4.05A2.99 2.99 0 0 0 21 5a3 3 0 1 0-3 3c.21 0 .42-.03.62-.08l-6.94 4.05a3 3 0 1 0 0 4.06l7 4.08c-.05.18-.08.37-.08.56a2.92 2.92 0 1 0 2.92-2.92Z" />
+                      <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z" />
                     </svg>
-                  </span>
-                  Share
+                  )}
                 </button>
-                <button
-                  role="menuitem"
-                  onClick={() => setShowPlaylists(true)}
-                  className="rounded-md px-2.5 py-2 text-left hover:bg-surface-2"
-                >
-                  <span className="inline-block w-4" aria-hidden />
-                  Add to playlist
-                </button>
-              </>
+              </div>
             ) : (
               <div className="flex flex-col">
                 <span className="px-2.5 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-muted">
@@ -259,37 +321,6 @@ export function TrackMenu({
                   </button>
                 </form>
               </div>
-            )}
-
-            <button
-              role="menuitemcheckbox"
-              aria-checked={muteState.songMuted}
-              onClick={() => toggleMute(muteState.songMuted ? "unmute" : "mute")}
-              className="rounded-md px-2.5 py-2 text-left hover:bg-surface-2"
-            >
-              <span
-                className={`inline-block w-4 text-accent ${muteState.songMuted ? "" : "invisible"}`}
-                aria-hidden
-              >
-                ✓
-              </span>
-              Do not autoplay this song
-            </button>
-            {track.albumId && (
-              <button
-                role="menuitemcheckbox"
-                aria-checked={muteState.albumMuted}
-                onClick={() => toggleMute(muteState.albumMuted ? "unmute-album" : "mute-album")}
-                className="rounded-md px-2.5 py-2 text-left hover:bg-surface-2"
-              >
-                <span
-                  className={`inline-block w-4 text-accent ${muteState.albumMuted ? "" : "invisible"}`}
-                  aria-hidden
-                >
-                  ✓
-                </span>
-                Do not autoplay this album
-              </button>
             )}
           </div>
         </>
