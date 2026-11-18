@@ -132,25 +132,15 @@ export function TrackMenu({
           ? "radio mix"
           : "queue";
   const modeIconSize = 24;
-  const modeIcon = repeatOne ? (
+  // one repeat icon for all modes: grey = radio/queue, accent = album,
+  // accent + "1" = repeating this song
+  const modeIcon = (
     <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z" />
-    </svg>
-  ) : contextKind === "album" ? (
-    <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
-    </svg>
-  ) : contextKind === "playlist" ? (
-    <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M3 6h13v2H3V6zm0 5h13v2H3v-2zm0 5h9v2H3v-2zm14 .5v-2.6l4.5 2.6-4.5 2.6v-2.6H14v-2.6h3z" />
-    </svg>
-  ) : contextKind === "station" ? (
-    <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM17.6 3.3l1.4 1.4-3.5 3.5-1.4-1.4 3.5-3.5zm1.1 16-1.4 1.4-3.5-3.5 1.4-1.4 3.5 3.5z" />
-    </svg>
-  ) : (
-    <svg width={modeIconSize} height={modeIconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
+      {repeatOne ? (
+        <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z" />
+      ) : (
+        <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" />
+      )}
     </svg>
   );
 
@@ -197,8 +187,10 @@ export function TrackMenu({
                       notify("Playing this album");
                     }
                   }}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-surface-2 ${
-                    repeatOne ? "text-accent" : "text-muted hover:text-foreground"
+                  className={`flex h-11 w-11 items-center justify-center rounded-lg transition hover:bg-surface-2 ${
+                    repeatOne || contextKind === "album"
+                      ? "text-accent"
+                      : "text-muted hover:text-foreground"
                   }`}
                 >
                   {modeIcon}
