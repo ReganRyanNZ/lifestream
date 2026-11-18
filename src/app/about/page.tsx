@@ -31,7 +31,8 @@ export default function AboutPage() {
         </p>
         <p>
           <strong className="font-semibold text-foreground/90">Legal rights:</strong> if you are
-          the creator of any of this music, you retain all rights and ownership. As a brother in
+          the creator of music on this platform, you retain all rights and ownership. As a
+          brother in
           the Body of Christ, the creator of Life Stream would beg you to permit your songs to
           continue to be shared with others through this service. These songs have rendered help
           to many believers, and it would be an honor to continue this. Please also note that no
