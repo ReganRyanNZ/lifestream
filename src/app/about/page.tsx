@@ -27,6 +27,26 @@ export default function AboutPage() {
         </p>
       </div>
 
+      <div className="flex flex-col gap-3 text-sm text-muted">
+        <p>
+          <strong className="font-semibold text-foreground/90">Playback stops with the screen off?</strong>{" "}
+          On Android, your phone may put the browser to sleep to save battery. Fix:{" "}
+          <em>Settings → Apps → Chrome (or your browser) → Battery → Unrestricted</em>. On
+          Samsung, Xiaomi and similar phones, also exclude the browser from the maker&rsquo;s
+          battery manager.
+        </p>
+        <p>
+          Questions or requests? Email{" "}
+          <a
+            href="mailto:lifestreambrothers@gmail.com"
+            className="text-foreground/90 underline decoration-border underline-offset-2 hover:decoration-foreground"
+          >
+            lifestreambrothers@gmail.com
+          </a>
+          .
+        </p>
+      </div>
+
       <hr className="border-border" />
 
       <p className="text-sm italic text-muted">

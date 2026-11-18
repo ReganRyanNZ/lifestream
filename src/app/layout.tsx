@@ -112,16 +112,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <footer className="border-t border-border py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] text-center text-xs text-muted">
           <Link href="/about" className="hover:underline">
             about
-          </Link>{" "}
-          ·{" "}
-          <a
-            href="mailto:lifestreambrothers@gmail.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:underline"
-          >
-            support
-          </a>
+          </Link>
         </footer>
 
         <Player />
