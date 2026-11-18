@@ -219,7 +219,7 @@ export function TrackMenu({
                   className="flex h-11 w-11 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                    <path d="M3 6h12v2H3V6zm0 4h12v2H3v-2zm0 4h7v2H3v-2zm14-6h2v4h4v2h-4v4h-2v-4h-4v-2h4V8z" />
+                    <path d="M3 4h12v2H3V4zm0 5h12v2H3V9zm0 5h7v2H3v-2zm13-7h2v14h-2V7zm-4 6h10v2H12z" />
                   </svg>
                 </button>
 
@@ -237,12 +237,12 @@ export function TrackMenu({
                 >
                   {muteState.albumMuted ? (
                     // double thumbs
-                    <svg width="33" height="24" viewBox="0 0 28 20" fill="currentColor" aria-hidden>
-                      <g opacity="0.55" transform="translate(-4 0)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                      <g opacity="0.55" transform="translate(-0.5 3) scale(0.75)">
                         <path d="M16 3H7c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2z" />
                         <path d="M23 3h-4v12h4V3z" />
                       </g>
-                      <g>
+                      <g transform="translate(6 0.5) scale(0.8)">
                         <path d="M16 3H7c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2z" />
                         <path d="M23 3h-4v12h4V3z" />
                       </g>
