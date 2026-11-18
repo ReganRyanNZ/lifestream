@@ -21,6 +21,15 @@ export default function AboutPage() {
 
       <div className="flex flex-col gap-3 text-sm text-muted">
         <p>
+          <strong className="font-semibold text-foreground/90">
+            Playback stops with the screen off?
+          </strong>{" "}
+          On Android, your phone may put the browser to sleep to save battery. Fix:{" "}
+          <em>Settings → Apps → Chrome (or your browser) → Battery → Unrestricted</em>. On
+          Samsung, Xiaomi and similar phones, also exclude the browser from the maker&rsquo;s
+          battery manager.
+        </p>
+        <p>
           <strong className="font-semibold text-foreground/90">Legal rights:</strong> if you are
           the creator of any of this music, you retain all rights and ownership. As a brother in
           the Body of Christ, the creator of Life Stream would beg you to permit your songs to
@@ -28,16 +37,6 @@ export default function AboutPage() {
           to many believers, and it would be an honor to continue this. Please also note that no
           money is being earned from this site, and if anyone asks about donations we would
           direct them to the original producers of the music.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-3 text-sm text-muted">
-        <p>
-          <strong className="font-semibold text-foreground/90">Playback stops with the screen off?</strong>{" "}
-          On Android, your phone may put the browser to sleep to save battery. Fix:{" "}
-          <em>Settings → Apps → Chrome (or your browser) → Battery → Unrestricted</em>. On
-          Samsung, Xiaomi and similar phones, also exclude the browser from the maker&rsquo;s
-          battery manager.
         </p>
         <p>
           Questions or requests? Email{" "}
