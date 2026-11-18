@@ -15,7 +15,21 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: PageProps<"/track/[id]">) {
   const { id } = await params;
   const track = await getTrackById(id).catch(() => null);
-  return { title: track ? track.title : "Song" };
+  if (!track) return { title: "Song" };
+  // og:image is what iMessage/WhatsApp/etc show — the track's artwork (which
+  // falls back to its album cover) instead of the site logo
+  return {
+    title: track.title,
+    openGraph: {
+      title: track.title,
+      description: `${track.artist} · Life Stream`,
+      ...(track.artworkUrl ? { images: [{ url: track.artworkUrl }] } : {}),
+    },
+    twitter: {
+      card: track.artworkUrl ? "summary_large_image" : "summary",
+      ...(track.artworkUrl ? { images: [track.artworkUrl] } : {}),
+    },
+  };
 }
 
 export default async function TrackPage({ params }: PageProps<"/track/[id]">) {

@@ -338,9 +338,14 @@ export function TrackMenu({
         </>
       )}
 
+      {/* anchored just above this control — clearing the popover too when it's open upward */}
       {notice && (
-        <div className="pointer-events-none fixed left-1/2 top-[max(1rem,env(safe-area-inset-top))] z-[70] -translate-x-1/2">
-          <div className="card px-3 py-1.5 text-xs">{notice}</div>
+        <div
+          className={`pointer-events-none absolute bottom-full left-1/2 z-[70] -translate-x-1/2 ${
+            openUp && menuOpen ? "mb-[4.5rem]" : "mb-2"
+          } max-w-[80vw]`}
+        >
+          <div className="card whitespace-normal px-3 py-1.5 text-center text-xs">{notice}</div>
         </div>
       )}
     </div>

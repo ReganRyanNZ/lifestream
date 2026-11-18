@@ -19,6 +19,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NODE_ENV === "production"
+      ? "https://lifestreamradio.com"
+      : "http://localhost:3000",
+  ),
   title: {
     default: "Life Stream",
     template: "%s · Life Stream",
